@@ -1,0 +1,40 @@
+{
+  "project_info": {
+    "project_number": "943832137374",
+    "firebase_url": "https://talk-chatingapp.firebaseio.com",
+    "project_id": "talk-chatingapp",
+    "storage_bucket": "talk-chatingapp.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:943832137374:android:e72cd7f72097d14a8ec58f",
+        "android_client_info": {
+          "package_name": "com.jsrd.talk"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "943832137374-in9idp5lb2j29vav07dbf7n723r7k56o.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyACtNpXksLwh1hzc4tw_BacwXbhOBGqusQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "943832137374-in9idp5lb2j29vav07dbf7n723r7k56o.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
