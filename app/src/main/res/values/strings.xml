@@ -1,3 +1,10 @@
 <resources>
     <string name="app_name">Talk</string>
+
+
+    <string name="msg_token_fmt" translatable="false">InstanceID Token: %s</string>
+    <string name="CHANNEL_ID" translatable="false">channel_1</string>
+    <string name="CHANNEL_NAME" translatable="false">Message_Recieved</string>
+    <string name="CHANNEL_DESCRIPTION" translatable="false">Message Recieved</string>
+
 </resources>
