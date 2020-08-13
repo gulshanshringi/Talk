@@ -1,5 +1,6 @@
-package com.jsrd.talk;
+package com.jsrd.talk.utils;
 
+import android.app.ActivityManager;
 import android.content.ContentResolver;
 import android.content.Context;
 import android.database.Cursor;
@@ -10,13 +11,12 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.List;
 import java.util.Locale;
 
 public class Utils {
 
-
-    public Utils() {
-    }
+    public Utils() {}
 
     public static String getNameByNumber(Context context, String number) {
         String res = null;
@@ -37,31 +37,36 @@ public class Utils {
         return res;
     }
 
-
-    public static String getDateTime(String dateTime) {
-        SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy_HH:mm:ss");
-        Date date;
+    public static String getTime(String dateTime) {
         String time = null;
-        try {
-            date = sdf.parse(dateTime);
-            if (isToday(date)) {
-                SimpleDateFormat sdf1 = new SimpleDateFormat("KK:mm a", Locale.getDefault());
-                time = sdf1.format(date);
-                return time;
-            }else {
-                SimpleDateFormat sdf1 = new SimpleDateFormat("dd/MM/yyyy", Locale.getDefault());
-                time = sdf1.format(date);
-                return time;
-            }
-
-        } catch (ParseException e) {
-            e.printStackTrace();
-        }
-
+        Date date = convertStringToDate(dateTime);
+        SimpleDateFormat sdf = new SimpleDateFormat("KK:mm a", Locale.getDefault());
+        time = sdf.format(date);
         return time;
     }
 
-    private static boolean isToday(Date date) {
+    public static String getDate(String dateTime) {
+        String time = null;
+        Date dt = convertStringToDate(dateTime);
+        SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy", Locale.getDefault());
+        time = sdf.format(dt);
+        return time;
+    }
+
+    public static Date convertStringToDate(String dateTime) {
+        SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy_HH:mm:ss");
+        Date date = null;
+        try {
+            date = sdf.parse(dateTime);
+        } catch (ParseException e) {
+            e.printStackTrace();
+        }
+        return date;
+    }
+
+    public static boolean isToday(String dateTime) {
+        Date date = convertStringToDate(dateTime);
+
         Calendar today = Calendar.getInstance();
         Calendar specifiedDate = Calendar.getInstance();
         specifiedDate.setTime(date);
@@ -71,5 +76,23 @@ public class Utils {
                 && today.get(Calendar.YEAR) == specifiedDate.get(Calendar.YEAR);
     }
 
+    public static String getCurrentDateAndTime() {
+        SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy_HH:mm:ss", Locale.getDefault());
+        String currentDateandTime = sdf.format(new Date());
+
+        return currentDateandTime;
+    }
+
+    public static boolean isAppIsRunning(Context context) {
+        ActivityManager am = (ActivityManager) context.getSystemService(Context.ACTIVITY_SERVICE);
+        List<ActivityManager.RunningAppProcessInfo> tasks = am.getRunningAppProcesses();
+        final String packageName = context.getPackageName();
+        for (ActivityManager.RunningAppProcessInfo appProcess : tasks) {
+            if (ActivityManager.RunningAppProcessInfo.IMPORTANCE_FOREGROUND == appProcess.importance && packageName.equals(appProcess.processName)) {
+                return true;
+            }
+        }
+        return false;
+    }
 
 }

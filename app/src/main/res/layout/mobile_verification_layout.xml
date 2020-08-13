@@ -50,8 +50,7 @@
                 android:editable="false"
                 android:hint="Mobile Number"
                 android:inputType="number"
-                android:padding="5dp"
-                android:text="1234567890" />
+                android:padding="5dp"/>
         </LinearLayout>
 
     </LinearLayout>
@@ -64,5 +63,6 @@
         android:layout_weight="0"
         android:background="@color/colorPrimary"
         android:onClick="phoneNumberAuthentication"
+        android:textColor="@color/white"
         android:text="Generate OTP" />
 </LinearLayout>

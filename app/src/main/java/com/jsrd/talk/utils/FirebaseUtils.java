@@ -1,4 +1,4 @@
-package com.jsrd.talk;
+package com.jsrd.talk.utils;
 
 import android.content.Context;
 import android.util.Log;
@@ -7,7 +7,6 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import com.google.android.gms.tasks.OnCompleteListener;
-import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.gms.tasks.Task;
 import com.google.firebase.auth.FirebaseAuth;
@@ -21,19 +20,19 @@ import com.google.firebase.firestore.FirebaseFirestoreException;
 import com.jsrd.talk.interfaces.ChatCallBack;
 import com.jsrd.talk.interfaces.ProgressSuccessCallBack;
 import com.jsrd.talk.interfaces.ReceiverCallback;
+import com.jsrd.talk.interfaces.StatusCallBack;
 import com.jsrd.talk.model.Chat;
 import com.jsrd.talk.model.ChatListDoc;
 import com.jsrd.talk.model.Message;
 import com.jsrd.talk.model.MessageListDoc;
+import com.jsrd.talk.model.User;
 
-import java.lang.reflect.Array;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
+
+import static com.jsrd.talk.utils.Utils.getCurrentDateAndTime;
 
 public class FirebaseUtils {
 
@@ -48,8 +47,12 @@ public class FirebaseUtils {
 
     public String getCurrentUserUID() {
         FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
-        String UID = user.getUid();
-        return UID;
+        if (user != null) {
+            String UID = user.getUid();
+            return UID;
+        } else {
+            return null;
+        }
     }
 
     public String getCurrentUserNumber() {
@@ -58,15 +61,13 @@ public class FirebaseUtils {
         return number;
     }
 
-    public void putUserInfoOnFirestore(FirebaseUser user) {
-        String userUID = getCurrentUserUID();
-        Map<String, Object> userData = new HashMap<>();
-        userData.put("Number", user.getPhoneNumber());
-        userData.put("UID", userUID);
-
+    public void putUserInfoOnFirestore(FirebaseUser firebaseUser) {
+        String userID = getCurrentUserUID();
+        String profilePic = firebaseUser.getPhotoUrl().toString();
+        User user = new User(userID, firebaseUser.getPhoneNumber(), "online", profilePic);
 
         Map<String, Object> adduserToList = new HashMap<>();
-        adduserToList.put("UsersList", FieldValue.arrayUnion(userData));
+        adduserToList.put("UsersList", FieldValue.arrayUnion(user));
 
         db.collection("Users").document("list")
                 .update(adduserToList).addOnSuccessListener(new OnSuccessListener<Void>() {
@@ -76,6 +77,9 @@ public class FirebaseUtils {
             }
         });
 
+        db.collection("Users").
+                document(userID).
+                set(user);
     }
 
     public void getReceiversUID(final String number, final ReceiverCallback callBack) {
@@ -89,10 +93,10 @@ public class FirebaseUtils {
                     List<Map<String, Object>> usersList = (List<Map<String, Object>>) document.get("UsersList");
 
                     for (Map<String, Object> user : usersList) {
-                        String num = (String) user.get("Number");
+                        String num = (String) user.get("userNumber");
                         if (num.contains(number) || num.equals(number)) {
                             isNumIsRegistered = true;
-                            UID = (String) user.get("UID");
+                            UID = (String) user.get("userID");
                             break;
                         }
                     }
@@ -108,10 +112,43 @@ public class FirebaseUtils {
         });
     }
 
-    public void sendMessage(final String receiversNumber, String sendersNumber, final String message, final String chatID, final ChatCallBack callBack) {
+    public void getReceiversProfilePic(final String number, final ReceiverCallback callBack) {
+        db.collection("Users").
+                document("list").
+                get().
+                addOnCompleteListener(new OnCompleteListener<DocumentSnapshot>() {
+            @Override
+            public void onComplete(@NonNull Task<DocumentSnapshot> task) {
+                if (task.isSuccessful()) {
+                    boolean isNumIsRegistered = false;
+                    String profilePic = null;
+                    DocumentSnapshot document = task.getResult();
+                    List<Map<String, Object>> usersList = (List<Map<String, Object>>) document.get("UsersList");
+
+                    for (Map<String, Object> user : usersList) {
+                        String num = (String) user.get("userNumber");
+                        if (num.contains(number) || num.equals(number)) {
+                            isNumIsRegistered = true;
+                            profilePic = (String) user.get("profilePic");
+                        }
+                    }
+                    if (isNumIsRegistered && profilePic != null) {
+                        callBack.onComplete(profilePic);
+                    } else {
+                        callBack.onComplete(null);
+                    }
+                } else {
+                    callBack.onComplete(null);
+                }
+            }
+        });
+    }
+
+
+    public void sendMessage(final String receiversNumber, String sendersNumber,
+                            final String message, final String chatID, final ChatCallBack callBack) {
         String userUID = getCurrentUserUID();
-        SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy_HH:mm:ss", Locale.getDefault());
-        String currentDateandTime = sdf.format(new Date());
+        String currentDateandTime = getCurrentDateAndTime();
 
         List<Message> messageList = new ArrayList<>();
         Message messageData = new Message(message, userUID, currentDateandTime);
@@ -159,7 +196,8 @@ public class FirebaseUtils {
         }
     }
 
-    public void putChatDataOnFirebaseForSender(final String receiversNumber, String sendersNumber, String receiversUID, String chatId, final ProgressSuccessCallBack callBack) {
+    public void putChatDataOnFirebaseForSender(final String receiversNumber, String sendersNumber,
+                                               String receiversUID, String chatId, final ProgressSuccessCallBack callBack) {
         final String userUID = getCurrentUserUID();
 
         if (chatId.length() > 0) {
@@ -175,7 +213,7 @@ public class FirebaseUtils {
 
                         db.collection("Users").
                                 document(userUID).
-                                set(chatListDoc).
+                                update("chatList", chatList).
                                 addOnSuccessListener(new OnSuccessListener<Void>() {
                                     @Override
                                     public void onSuccess(Void aVoid) {
@@ -185,12 +223,11 @@ public class FirebaseUtils {
                                                 callBack.onSuccess(true);
                                             }
                                         });
-
                                     }
                                 });
                     } else {
                         Map<String, Object> addChatDataToList = new HashMap<>();
-                        addChatDataToList.put("ChatList", FieldValue.arrayUnion(chatData));
+                        addChatDataToList.put("chatList", FieldValue.arrayUnion(chatData));
 
                         db.collection("Users").
                                 document(userUID)
@@ -265,7 +302,7 @@ public class FirebaseUtils {
                             List<Chat> chatList = new ArrayList<>();
                             DocumentSnapshot document = task.getResult();
                             if (document.toObject(ChatListDoc.class) != null) {
-                                chatList = document.toObject(ChatListDoc.class).ChatList;
+                                chatList = document.toObject(ChatListDoc.class).chatList;
                                 if (chatList != null) {
                                     callBack.onComplete(null, null, chatList);
                                 } else {
@@ -347,7 +384,7 @@ public class FirebaseUtils {
                     return;
                 }
                 if (snapshot != null && snapshot.exists() && snapshot.toObject(ChatListDoc.class) != null) {
-                    List<Chat> chatList = snapshot.toObject(ChatListDoc.class).ChatList;
+                    List<Chat> chatList = snapshot.toObject(ChatListDoc.class).chatList;
                     if (chatList != null) {
                         callBack.onComplete(null, null, chatList);
                     } else {
@@ -359,5 +396,45 @@ public class FirebaseUtils {
             }
         });
     }
+
+    public void updateStatus(String status) {
+        String userID = getCurrentUserUID();
+        if (userID != null) {
+            db.collection("Users").document(userID).update("status", status);
+        }
+    }
+
+    public void listenForStatusInRealTime(String userID, StatusCallBack callBack) {
+        db.collection("Users").document(userID).addSnapshotListener(new EventListener<DocumentSnapshot>() {
+            @Override
+            public void onEvent(@Nullable DocumentSnapshot value, @Nullable FirebaseFirestoreException error) {
+                if (value != null) {
+                    String status = (String) value.get("status");
+                    if (status != null) {
+                        callBack.onStatusUpdate(status);
+                    }
+                }
+            }
+        });
+    }
+
+//    public void getProfilePicOfUsers(ReceiverCallback callBack) {
+//        String userID = getCurrentUserUID();
+//        db.collection("Users").document(userID).get().addOnCompleteListener(new OnCompleteListener<DocumentSnapshot>() {
+//            @Override
+//            public void onComplete(@NonNull Task<DocumentSnapshot> task) {
+//                if (task.isSuccessful()) {
+//                    DocumentSnapshot documnet = task.getResult();
+//
+//                    User user = documnet.toObject(User.class);
+//                    if (user != null) {
+//                        Log.i(TAG, user.getUserNumber());
+//                    }
+//
+//                }
+//            }
+//        });
+//
+//    }
 
 }

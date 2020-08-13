@@ -1,4 +1,4 @@
-package com.jsrd.talk;
+package com.jsrd.talk.adapters;
 
 import android.content.Context;
 import android.view.LayoutInflater;
@@ -8,6 +8,9 @@ import android.widget.ArrayAdapter;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
+
+import com.jsrd.talk.R;
+import com.jsrd.talk.model.Contact;
 
 import java.util.List;
 

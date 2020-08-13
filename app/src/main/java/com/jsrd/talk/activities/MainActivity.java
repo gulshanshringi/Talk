@@ -1,38 +1,38 @@
-package com.jsrd.talk;
+package com.jsrd.talk.activities;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
-import androidx.core.app.ActivityCompat;
 import androidx.fragment.app.DialogFragment;
+import androidx.recyclerview.widget.DividerItemDecoration;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
-import android.content.ContentResolver;
-import android.content.Context;
 import android.content.Intent;
-import android.content.pm.PackageManager;
-import android.database.Cursor;
 import android.graphics.Color;
-import android.net.Uri;
 import android.os.Bundle;
-import android.provider.ContactsContract;
-import android.util.Log;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.view.View;
 import android.widget.ProgressBar;
 import android.widget.Toast;
 
 import com.github.ybq.android.spinkit.sprite.Sprite;
 import com.github.ybq.android.spinkit.style.Circle;
+import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.messaging.FirebaseMessaging;
+import com.jsrd.talk.adapters.ChatListAdapter;
+import com.jsrd.talk.fragments.ContactFragmentDialog;
+import com.jsrd.talk.R;
 import com.jsrd.talk.interfaces.ChatCallBack;
-import com.jsrd.talk.interfaces.ProgressSuccessCallBack;
-import com.jsrd.talk.interfaces.ReceiverCallback;
 import com.jsrd.talk.model.Chat;
 import com.jsrd.talk.model.Message;
-import com.jsrd.talk.notification.MyNotificationManager;
+import com.jsrd.talk.utils.FirebaseUtils;
+import com.jsrd.talk.utils.Utils;
 
+import java.util.Collections;
 import java.util.List;
-import java.util.Map;
+
+import static com.jsrd.talk.utils.Utils.getCurrentDateAndTime;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -48,30 +48,95 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        //setup toolbar
-        activityMainToolbar = (Toolbar) findViewById(R.id.activityMainToolbar);
-        activityMainToolbar.setTitle(R.string.app_name);
-        setSupportActionBar(activityMainToolbar);
-
         firebaseUtils = new FirebaseUtils(this);
 
-        chatListRecyclerView = findViewById(R.id.chatListRecyclerView);
-        maProgressBar = findViewById(R.id.maProgressBar);
-        chatListRecyclerView.setLayoutManager(new LinearLayoutManager(this));
 
-        Sprite circle = new Circle();
-        circle.setColor(Color.BLUE);
-        maProgressBar.setIndeterminateDrawable(circle);
+        //setup toolbar
+        setupToolbar();
 
-        checkPermission();
+        //setup recycler view for chat list
+        setupRecyclerView();
+
+        setupProgressBar();
+
+
+        //checkPermission();
         subscribeForNotification();
-        // getUsersChatList();
     }
 
     @Override
     protected void onResume() {
         super.onResume();
         listenForChatsInRealTime();
+        firebaseUtils.updateStatus("online");
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        if (!Utils.isAppIsRunning(this)) {
+            firebaseUtils.updateStatus(getCurrentDateAndTime());
+        }
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        firebaseUtils.updateStatus(getCurrentDateAndTime());
+    }
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        // Inflate the menu; this adds items to the action bar if it is present.
+        getMenuInflater().inflate(R.menu.menu_item_main_toolbar, menu);
+        return true;
+    }
+
+    private void setupToolbar() {
+        activityMainToolbar = (Toolbar) findViewById(R.id.activityMainToolbar);
+        activityMainToolbar.setTitle(R.string.app_name);
+        setSupportActionBar(activityMainToolbar);
+
+
+        activityMainToolbar.setOnMenuItemClickListener(new Toolbar.OnMenuItemClickListener() {
+            @Override
+            public boolean onMenuItemClick(MenuItem item) {
+
+                switch (item.getItemId()) {
+                    case R.id.profile:
+                        Intent intent = new Intent(MainActivity.this, CurrentUserProfileActivity.class);
+                        startActivity(intent);
+                        break;
+                    case R.id.logout:
+                        FirebaseAuth.getInstance().signOut();
+                        Intent phoneAuthIntent = new Intent(MainActivity.this, PhoneAuthActivity.class);
+                        startActivity(phoneAuthIntent);
+                        finish();
+                        break;
+                }
+
+
+                return false;
+            }
+        });
+
+    }
+
+    private void setupRecyclerView() {
+        chatListRecyclerView = findViewById(R.id.chatListRecyclerView);
+
+        LinearLayoutManager layoutManager = new LinearLayoutManager(this);
+        chatListRecyclerView.setLayoutManager(layoutManager);
+        DividerItemDecoration dividerItemDecoration = new DividerItemDecoration(chatListRecyclerView.getContext(),
+                layoutManager.getOrientation());
+        chatListRecyclerView.addItemDecoration(dividerItemDecoration);
+    }
+
+    private void setupProgressBar() {
+        maProgressBar = findViewById(R.id.maProgressBar);
+        Sprite circle = new Circle();
+        circle.setColor(Color.BLUE);
+        maProgressBar.setIndeterminateDrawable(circle);
     }
 
     public void getUsersChatList() {
@@ -110,16 +175,17 @@ public class MainActivity extends AppCompatActivity {
                         adapter = new ChatListAdapter(MainActivity.this, chatList);
                         chatListRecyclerView.setAdapter(adapter);
                         maProgressBar.setVisibility(View.GONE);
+                        findViewById(R.id.rlChatsLayout).setVisibility(View.VISIBLE);
+                        findViewById(R.id.rlNoChatsLayout).setVisibility(View.GONE);
                     } else {
                         maProgressBar.setVisibility(View.GONE);
-                        Toast.makeText(MainActivity.this, "No Chats Found", Toast.LENGTH_SHORT).show();
+                        findViewById(R.id.rlChatsLayout).setVisibility(View.GONE);
+                        findViewById(R.id.rlNoChatsLayout).setVisibility(View.VISIBLE);
                     }
                 }
             });
         }
     }
-
-
 
     private void subscribeForNotification() {
         firebaseUtils = new FirebaseUtils(this);
@@ -132,29 +198,4 @@ public class MainActivity extends AppCompatActivity {
         contactFragment.setStyle(DialogFragment.STYLE_NO_FRAME, R.style.Theme_AppCompat_Light_NoActionBar);
         contactFragment.show(getSupportFragmentManager(), "ContactFragmentDialog");
     }
-
-    private void checkPermission() {
-        int PERMISSION_ALL = 1;
-        String[] PERMISSIONS = {
-                android.Manifest.permission.READ_CONTACTS
-                //,  android.Manifest.permission.ACCESS_FINE_LOCATION,
-                //  android.Manifest.permission.CAMERA
-        };
-
-        if (!hasPermissions(this, PERMISSIONS)) {
-            ActivityCompat.requestPermissions(this, PERMISSIONS, PERMISSION_ALL);
-        }
-    }
-
-    public static boolean hasPermissions(Context context, String... permissions) {
-        if (context != null && permissions != null) {
-            for (String permission : permissions) {
-                if (ActivityCompat.checkSelfPermission(context, permission) != PackageManager.PERMISSION_GRANTED) {
-                    return false;
-                }
-            }
-        }
-        return true;
-    }
-
 }

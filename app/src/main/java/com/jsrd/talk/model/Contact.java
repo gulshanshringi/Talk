@@ -1,4 +1,4 @@
-package com.jsrd.talk;
+package com.jsrd.talk.model;
 
 import java.util.Comparator;
 
@@ -7,13 +7,18 @@ public class Contact {
     private String ContactName;
     private String Number;
 
-    public Contact(String contactName , String number){
-        ContactName = contactName ;
+    public Contact(String contactName, String number) {
+        ContactName = contactName;
         Number = number;
     }
 
-    public String getContactName(){return ContactName;}
-    public String getNumber(){return Number;}
+    public String getContactName() {
+        return ContactName;
+    }
+
+    public String getNumber() {
+        return Number;
+    }
 
 
     public static Comparator<Contact> ContactNameComparator = new Comparator<Contact>() {
@@ -27,8 +32,8 @@ public class Contact {
 
             //descending order
             //return StudentName2.compareTo(StudentName1);
-        }};
-
+        }
+    };
 
 
 }

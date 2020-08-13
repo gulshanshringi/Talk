@@ -13,16 +13,15 @@ import android.provider.ContactsContract;
 
 import androidx.core.app.NotificationCompat;
 
-import com.jsrd.talk.ChatActivity;
+import com.jsrd.talk.activities.ChatActivity;
 import com.jsrd.talk.R;
 
 import static android.content.Context.NOTIFICATION_SERVICE;
 
 public class MyNotificationManager {
-
-
     private Context mCtx;
     private static MyNotificationManager mInstance;
+    private String chatingWith;
 
     private MyNotificationManager(Context context) {
         mCtx = context;
@@ -35,65 +34,47 @@ public class MyNotificationManager {
         return mInstance;
     }
 
+
     public void displayNotification(String title, String body, String userId, String chatID) {
 
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-            NotificationManager mNotificationManager =
-                    (NotificationManager) mCtx.getSystemService(Context.NOTIFICATION_SERVICE);
-            int importance = NotificationManager.IMPORTANCE_HIGH;
-            NotificationChannel mChannel = new NotificationChannel(mCtx.getResources().getString(R.string.CHANNEL_ID), mCtx.getResources().getString(R.string.CHANNEL_NAME), importance);
-            mChannel.setDescription(mCtx.getResources().getString(R.string.CHANNEL_DESCRIPTION));
-            mChannel.enableLights(true);
-            mChannel.setLightColor(Color.RED);
-            mChannel.enableVibration(true);
-            mChannel.setVibrationPattern(new long[]{100, 200, 300, 400, 500, 400, 300, 200, 400});
-            mNotificationManager.createNotificationChannel(mChannel);
-        }
+        chatingWith = ChatActivity.chatingWith;
 
+        if (chatingWith == null || !chatingWith.equals(title)) {
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                NotificationManager mNotificationManager =
+                        (NotificationManager) mCtx.getSystemService(Context.NOTIFICATION_SERVICE);
+                int importance = NotificationManager.IMPORTANCE_HIGH;
+                NotificationChannel mChannel = new NotificationChannel(mCtx.getResources().getString(R.string.CHANNEL_ID), mCtx.getResources().getString(R.string.CHANNEL_NAME), importance);
+                mChannel.setDescription(mCtx.getResources().getString(R.string.CHANNEL_DESCRIPTION));
+                mChannel.enableLights(true);
+                mChannel.setLightColor(Color.RED);
+                mChannel.enableVibration(true);
+                mChannel.setVibrationPattern(new long[]{100, 200, 300, 400, 500, 400, 300, 200, 400});
+                mNotificationManager.createNotificationChannel(mChannel);
+            }
 
-        NotificationCompat.Builder mBuilder =
-                new NotificationCompat.Builder(mCtx, mCtx.getResources().getString(R.string.CHANNEL_ID))
-                        .setSmallIcon(R.drawable.ic_launcher_foreground)
-                        .setContentTitle(getNameByNumber(title))
-                        .setContentText(body);
+            NotificationCompat.Builder mBuilder =
+                    new NotificationCompat.Builder(mCtx, mCtx.getResources().getString(R.string.CHANNEL_ID))
+                            .setSmallIcon(R.drawable.ic_launcher_foreground)
+                            .setContentTitle(getNameByNumber(title))
+                            .setContentText(body).
+                            setAutoCancel(true);
 
+            Intent resultIntent = new Intent(mCtx, ChatActivity.class);
+            resultIntent.putExtra("UserNumber", title);
+            resultIntent.putExtra("UserID", userId);
+            resultIntent.putExtra("ChatID", chatID);
 
-        /*
-         *  Clicking on the notification will take us to this intent
-         *  Right now we are using the MainActivity as this is the only activity we have in our application
-         *  But for your project you can customize it as you want
-         * */
+            PendingIntent pendingIntent = PendingIntent.getActivity(mCtx, 0, resultIntent, PendingIntent.FLAG_UPDATE_CURRENT);
 
-        Intent resultIntent = new Intent(mCtx, ChatActivity.class);
-        resultIntent.putExtra("UserNumber", title);
-        resultIntent.putExtra("UserID", userId);
-        resultIntent.putExtra("ChatID", chatID);
-        /*
-         *  Now we will create a pending intent
-         *  The method getActivity is taking 4 parameters
-         *  All paramters are describing themselves
-         *  0 is the request code (the second parameter)
-         *  We can detect this code in the activity that will open by this we can get
-         *  Which notification opened the activity
-         * */
-        PendingIntent pendingIntent = PendingIntent.getActivity(mCtx, 0, resultIntent, PendingIntent.FLAG_UPDATE_CURRENT);
+            mBuilder.setContentIntent(pendingIntent);
 
-        /*
-         *  Setting the pending intent to notification builder
-         * */
+            NotificationManager mNotifyMgr =
+                    (NotificationManager) mCtx.getSystemService(NOTIFICATION_SERVICE);
 
-        mBuilder.setContentIntent(pendingIntent);
-
-        NotificationManager mNotifyMgr =
-                (NotificationManager) mCtx.getSystemService(NOTIFICATION_SERVICE);
-
-        /*
-         * The first parameter is the notification id
-         * better don't give a literal here (right now we are giving a int literal)
-         * because using this id we can modify it later
-         * */
-        if (mNotifyMgr != null) {
-            mNotifyMgr.notify(1, mBuilder.build());
+            if (mNotifyMgr != null) {
+                mNotifyMgr.notify(1, mBuilder.build());
+            }
         }
     }
 

@@ -15,6 +15,8 @@ import com.jsrd.talk.notification.MyNotificationManager;
 
 import java.util.List;
 
+import static com.jsrd.talk.utils.Utils.isAppIsRunning;
+
 public class FirebaseCloudMessagingService extends FirebaseMessagingService {
 
     private String TAG = "FirebaseCloudMessagingService";
@@ -31,32 +33,13 @@ public class FirebaseCloudMessagingService extends FirebaseMessagingService {
         String chatId = remoteMessage.getData().get("chatID");
         String userId = remoteMessage.getData().get("userID");
 
-//        Log.i("FirebaseCloudMessaging",title + " " + body);
-//        FirebaseUtils firebaseUtils = new FirebaseUtils(getApplicationContext());
-//        firebaseUtils.putChatDataOnFirebaseForSender(title, userId, chatId, new ProgressSuccessCallBack() {
-//            @Override
-//            public void onSuccess(boolean success) {
-//                displayNotification(title, body);
-//            }
-//        });
 
-        if (isForeground(getApplicationContext())) {
+        if (isAppIsRunning(getApplicationContext())) {
 
         } else {
-            MyNotificationManager.getInstance(this).displayNotification(title, body, userId,chatId);
+            MyNotificationManager.getInstance(this).displayNotification(title, body, userId, chatId);
         }
     }
 
-    private static boolean isForeground(Context context) {
-        ActivityManager am = (ActivityManager) context.getSystemService(Context.ACTIVITY_SERVICE);
-        List<ActivityManager.RunningAppProcessInfo> tasks = am.getRunningAppProcesses();
-        final String packageName = context.getPackageName();
-        for (ActivityManager.RunningAppProcessInfo appProcess : tasks) {
-            if (ActivityManager.RunningAppProcessInfo.IMPORTANCE_FOREGROUND == appProcess.importance && packageName.equals(appProcess.processName)) {
-                return true;
-            }
-        }
-        return false;
-    }
 
 }

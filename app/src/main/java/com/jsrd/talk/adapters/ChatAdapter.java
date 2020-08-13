@@ -1,9 +1,6 @@
-package com.jsrd.talk;
+package com.jsrd.talk.adapters;
 
 import android.content.Context;
-import android.text.format.DateUtils;
-import android.util.Log;
-import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -13,16 +10,12 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.jsrd.talk.R;
 import com.jsrd.talk.model.Message;
+import com.jsrd.talk.utils.Utils;
 
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
-import java.util.Calendar;
-import java.util.Date;
 import java.util.List;
-import java.util.Locale;
 
-import static com.jsrd.talk.Utils.getDateTime;
 
 public class ChatAdapter extends RecyclerView.Adapter<ChatAdapter.ChatViewHolder> {
 
@@ -53,11 +46,21 @@ public class ChatAdapter extends RecyclerView.Adapter<ChatAdapter.ChatViewHolder
         if (sender.equals(currentUserUID)) {
             holder.rightMsgLayout.setVisibility(View.VISIBLE);
             holder.rightMsgTxt.setText(message.getMessage());
-            holder.rightTimeTxt.setText(getDateTime(message.getDateTime()));
+            String dateTime = message.getDateTime();
+            if (Utils.isToday(dateTime)) {
+                holder.rightTimeTxt.setText(Utils.getTime(dateTime));
+            } else {
+                holder.rightTimeTxt.setText(Utils.getDate(dateTime));
+            }
         } else {
             holder.leftMsgLayout.setVisibility(View.VISIBLE);
             holder.leftMsgTxt.setText(message.getMessage());
-            holder.leftTimeTxt.setText(getDateTime(message.getDateTime()));
+            String dateTime = message.getDateTime();
+            if (Utils.isToday(dateTime)) {
+                holder.leftTimeTxt.setText(Utils.getTime(dateTime));
+            } else {
+                holder.leftTimeTxt.setText(Utils.getDate(dateTime));
+            }
         }
     }
 
@@ -81,9 +84,6 @@ public class ChatAdapter extends RecyclerView.Adapter<ChatAdapter.ChatViewHolder
             rightMsgLayout = itemView.findViewById(R.id.rightMsgLayout);
             rightMsgTxt = itemView.findViewById(R.id.rightMsgTxt);
             rightTimeTxt = itemView.findViewById(R.id.rightTimeTxt);
-
         }
     }
-
-
 }

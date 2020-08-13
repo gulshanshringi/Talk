@@ -5,23 +5,54 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    tools:context=".MainActivity">
+    tools:context=".activities.MainActivity">
 
     <androidx.appcompat.widget.Toolbar
         android:id="@+id/activityMainToolbar"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:background="@color/colorPrimary"
-        android:theme="@style/ThemeOverlay.AppCompat.Dark" />
+        android:theme="@style/ThemeOverlay.AppCompat.Dark"
+        app:menu="@menu/menu_item_main_toolbar" />
 
-
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/chatListRecyclerView"
+    <RelativeLayout
+        android:id="@+id/rlChatsLayout"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:layout_below="@id/activityMainToolbar"
-        android:layout_margin="5dp" />
+        android:visibility="visible">
 
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/chatListRecyclerView"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_margin="5dp" />
+
+
+    </RelativeLayout>
+
+    <RelativeLayout
+        android:id="@+id/rlNoChatsLayout"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_below="@id/activityMainToolbar"
+        android:visibility="gone">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_centerInParent="true"
+            android:gravity="center"
+            android:text="No Chats Found \nclick on + button to chat with your friends" />
+
+
+    </RelativeLayout>
+
+    <ProgressBar
+        android:id="@+id/maProgressBar"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_centerInParent="true" />
 
     <com.google.android.material.floatingactionbutton.FloatingActionButton
         android:id="@+id/floatingActionButton"
@@ -33,13 +64,6 @@
         android:clickable="true"
         android:onClick="showContactList"
         android:src="@drawable/ic_add"
-        app:backgroundTint="@color/colorPrimary"
-        />
-
-    <ProgressBar
-        android:id="@+id/maProgressBar"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_centerInParent="true" />
+        app:backgroundTint="@color/colorPrimary" />
 
 </RelativeLayout>

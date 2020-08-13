@@ -5,7 +5,7 @@ import com.google.gson.annotations.SerializedName;
 import java.io.Serializable;
 import java.util.List;
 
-public class Chat implements Serializable {
+public class Chat implements Serializable, Comparable<Chat> {
 
     private String chatID;
     private String receiversUID;
@@ -61,5 +61,10 @@ public class Chat implements Serializable {
 
     public void setMessages(List<Message> messages) {
         this.messages = messages;
+    }
+
+    @Override
+    public int compareTo(Chat chat) {
+        return getMessages().get(getMessages().size() - 1).getDateTime().compareTo(chat.getMessages().get(chat.getMessages().size() - 1).getDateTime());
     }
 }

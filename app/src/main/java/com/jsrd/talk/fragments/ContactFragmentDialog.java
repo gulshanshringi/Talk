@@ -1,6 +1,5 @@
-package com.jsrd.talk;
+package com.jsrd.talk.fragments;
 
-import android.content.Intent;
 import android.database.Cursor;
 import android.net.Uri;
 import android.os.Bundle;
@@ -8,7 +7,6 @@ import android.os.Bundle;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.DialogFragment;
-import androidx.fragment.app.Fragment;
 import androidx.loader.app.LoaderManager;
 import androidx.loader.content.CursorLoader;
 import androidx.loader.content.Loader;
@@ -25,8 +23,12 @@ import android.widget.ImageView;
 import android.widget.ListView;
 import android.widget.Toast;
 
-import com.jsrd.talk.interfaces.ProgressSuccessCallBack;
+import com.jsrd.talk.model.Contact;
+import com.jsrd.talk.adapters.ContactAdapter;
+import com.jsrd.talk.R;
+import com.jsrd.talk.activities.MainActivity;
 import com.jsrd.talk.interfaces.ReceiverCallback;
+import com.jsrd.talk.utils.FirebaseUtils;
 
 import java.util.ArrayList;
 import java.util.Collections;

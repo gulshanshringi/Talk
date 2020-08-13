@@ -4,16 +4,19 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context=".PhoneAuthActivity">
+    tools:context=".activities.PhoneAuthActivity">
 
 
     <ViewAnimator
         android:id="@+id/phoneAuthViewAnimator"
         android:layout_width="match_parent"
         android:layout_height="match_parent">
+
         <include layout="@layout/mobile_verification_layout" />
 
         <include layout="@layout/otp_verification_layout" />
+
+        <include layout="@layout/user_details_layout" />
 
     </ViewAnimator>
 

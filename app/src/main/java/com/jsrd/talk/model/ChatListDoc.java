@@ -6,10 +6,10 @@ import java.util.List;
 
 public class ChatListDoc {
 
-    public List<Chat> ChatList;
+    public List<Chat> chatList;
 
-    public ChatListDoc(List<Chat> ChatList) {
-        this.ChatList = ChatList;
+    public ChatListDoc(List<Chat> chatList) {
+        this.chatList = chatList;
     }
 
     public ChatListDoc() {

@@ -1,17 +1,17 @@
-package com.jsrd.talk;
+package com.jsrd.talk.activities;
 
+import android.content.Intent;
 import android.graphics.Color;
 import android.media.Ringtone;
 import android.media.RingtoneManager;
 import android.net.Uri;
 import android.os.Bundle;
-import android.text.Editable;
-import android.text.TextWatcher;
 import android.util.Log;
 import android.view.View;
 import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.ProgressBar;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
@@ -21,7 +21,10 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.github.ybq.android.spinkit.sprite.Sprite;
 import com.github.ybq.android.spinkit.style.Circle;
+import com.jsrd.talk.adapters.ChatAdapter;
+import com.jsrd.talk.R;
 import com.jsrd.talk.interfaces.ChatCallBack;
+import com.jsrd.talk.interfaces.StatusCallBack;
 import com.jsrd.talk.model.Chat;
 import com.jsrd.talk.model.Message;
 import com.jsrd.talk.notification.APIService;
@@ -29,30 +32,38 @@ import com.jsrd.talk.notification.Client;
 import com.jsrd.talk.notification.Data;
 import com.jsrd.talk.notification.MyResponse;
 import com.jsrd.talk.notification.Sender;
+import com.jsrd.talk.utils.FirebaseUtils;
+import com.jsrd.talk.utils.Utils;
 
 import java.util.List;
-import java.util.Map;
 
 import retrofit2.Call;
 import retrofit2.Callback;
+
+import static com.jsrd.talk.utils.Utils.getCurrentDateAndTime;
+import static com.jsrd.talk.utils.Utils.getDate;
+import static com.jsrd.talk.utils.Utils.getNameByNumber;
+import static com.jsrd.talk.utils.Utils.isToday;
 
 public class ChatActivity extends AppCompatActivity {
 
     final private String FCM_API_URL = "https://fcm.googleapis.com/";
     private ProgressBar caProgressBar;
     private RecyclerView chatListRecyclerView;
-    private EditText msgEditTxt;
-    private FirebaseUtils ff;
+    private EditText etMsg;
+    private FirebaseUtils firebaseUtils;
     private Toolbar chatActivityToolbar;
     private String receiversUserID, receiversNumber;
-    private String currentUserNumber, currentUserUID;
+    private String currentUserNumber, currentUserID;
     private String chatId;
+    public static String chatingWith;
     private String token = "/topics/";
     private APIService apiService;
     private Chat chat;
     private boolean isListeningForMessage = false;
     private ImageButton sendBtn;
     private boolean isSetupComplete = false;
+    private TextView tvToolbarTitle, tvStatus;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -61,10 +72,12 @@ public class ChatActivity extends AppCompatActivity {
 
 
         caProgressBar = findViewById(R.id.caProgressBar);
-        msgEditTxt = findViewById(R.id.msgEditTxt);
+        etMsg = findViewById(R.id.etMsg);
         chatListRecyclerView = findViewById(R.id.chatListRecyclerView);
         chatActivityToolbar = (Toolbar) findViewById(R.id.activityMainToolbar);
         sendBtn = findViewById(R.id.sendBtn);
+        tvToolbarTitle = findViewById(R.id.tvToolbarTitle);
+        tvStatus = findViewById(R.id.tvStatus);
 
         receiversUserID = getIntent().getStringExtra("UserID");
         receiversNumber = getIntent().getStringExtra("UserNumber");
@@ -72,18 +85,19 @@ public class ChatActivity extends AppCompatActivity {
 
 
         //setup toolbar
-        chatActivityToolbar.setTitle(Utils.getNameByNumber(this, receiversNumber));
+        chatActivityToolbar.setTitle("");
         setSupportActionBar(chatActivityToolbar);
         //add back button on toolbar
         getSupportActionBar().setDisplayHomeAsUpEnabled(true);
         getSupportActionBar().setDisplayShowHomeEnabled(true);
+        tvToolbarTitle.setText(getNameByNumber(this, receiversNumber));
 
         //setup progress bar
         Sprite circle = new Circle();
         circle.setColor(Color.BLUE);
         caProgressBar.setIndeterminateDrawable(circle);
 
-        ff = new FirebaseUtils(this);
+        firebaseUtils = new FirebaseUtils(this);
 
         //setup recycler view
         LinearLayoutManager layoutManager = new LinearLayoutManager(this);
@@ -104,8 +118,10 @@ public class ChatActivity extends AppCompatActivity {
 
         token += receiversUserID;
 
-        currentUserNumber = ff.getCurrentUserNumber();
-        currentUserUID = ff.getCurrentUserUID();
+        currentUserNumber = firebaseUtils.getCurrentUserNumber();
+        currentUserID = firebaseUtils.getCurrentUserUID();
+
+        listenForStatusInRealTime(receiversUserID);
 
         apiService = Client.getClient(FCM_API_URL).create(APIService.class);
     }
@@ -116,9 +132,56 @@ public class ChatActivity extends AppCompatActivity {
         return true;
     }
 
+    @Override
+    protected void onStop() {
+        super.onStop();
+        chatingWith = null;
+        if (!Utils.isAppIsRunning(this)) {
+            firebaseUtils.updateStatus(getCurrentDateAndTime());
+        }
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        chatingWith = receiversNumber;
+        firebaseUtils.updateStatus("online");
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        chatingWith = null;
+    }
+
+    public void openUserProfileActivity(View view) {
+        Intent intent = new Intent(ChatActivity.this, UserProfileActivity.class);
+        intent.putExtra("UserNumber", receiversNumber);
+        startActivity(intent);
+    }
+
+    private void listenForStatusInRealTime(String userId) {
+        firebaseUtils.listenForStatusInRealTime(userId, new StatusCallBack() {
+            @Override
+            public void onStatusUpdate(String status) {
+                if (status != null) {
+                    if (status.equals("online")) {
+                        tvStatus.setText(status);
+                    } else {
+                        if (isToday(status)) {
+                            tvStatus.setText("last seen today at " + Utils.getTime(status));
+                        } else {
+                            tvStatus.setText("last seen " + getDate(status) + " at " + Utils.getTime(status));
+                        }
+                    }
+                }
+            }
+        });
+    }
+
     private void setChatData(List<Message> messageList) {
         caProgressBar.setVisibility(View.VISIBLE);
-        ChatAdapter adapter = new ChatAdapter(ChatActivity.this, messageList, currentUserUID);
+        ChatAdapter adapter = new ChatAdapter(ChatActivity.this, messageList, currentUserID);
         chatListRecyclerView.setAdapter(adapter);
         caProgressBar.setVisibility(View.GONE);
         chatListRecyclerView.smoothScrollToPosition(messageList.size() - 1);
@@ -129,10 +192,10 @@ public class ChatActivity extends AppCompatActivity {
     }
 
     public void sendMessage(View view) {
-        final String message = msgEditTxt.getText().toString();
-        msgEditTxt.setText("");
+        final String message = etMsg.getText().toString();
+        etMsg.setText("");
         if (message.length() > 0) {
-            ff.sendMessage(receiversNumber, currentUserNumber, message, chatId, new ChatCallBack() {
+            firebaseUtils.sendMessage(receiversNumber, currentUserNumber, message, chatId, new ChatCallBack() {
                 @Override
                 public void onComplete(String chatID, List<Message> messageList, List<Chat> chatList) {
                     if (chatID != null) {
@@ -149,7 +212,7 @@ public class ChatActivity extends AppCompatActivity {
     }
 
     private void sendNotification(String message, String chatID) {
-        Data data = new Data(message, currentUserNumber, chatID, currentUserUID);
+        Data data = new Data(message, currentUserNumber, chatID, currentUserID);
         Sender sender = new Sender(data, token);
 
         apiService.sendNotification(sender).enqueue(new Callback<MyResponse>() {
@@ -181,7 +244,7 @@ public class ChatActivity extends AppCompatActivity {
                     if (messageList != null) {
                         setChatData(messageList);
                         String currentUserUID = firebaseUtils.getCurrentUserUID();
-                        String sender = messageList.get(messageList.size()-1).getSender();
+                        String sender = messageList.get(messageList.size() - 1).getSender();
                         if (isSetupComplete && !sender.equals(currentUserUID)) {
                             try {
                                 Uri notification = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);

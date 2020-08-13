@@ -1,8 +1,7 @@
-package com.jsrd.talk;
+package com.jsrd.talk.adapters;
 
 import android.content.Context;
 import android.content.Intent;
-import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -11,16 +10,22 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.bumptech.glide.Glide;
+import com.jsrd.talk.R;
+import com.jsrd.talk.activities.ChatActivity;
 import com.jsrd.talk.interfaces.ChatCallBack;
+import com.jsrd.talk.interfaces.ReceiverCallback;
 import com.jsrd.talk.model.Chat;
 import com.jsrd.talk.model.Message;
 import com.jsrd.talk.notification.MyNotificationManager;
+import com.jsrd.talk.utils.FirebaseUtils;
+import com.jsrd.talk.utils.Utils;
+import com.mikhaellopez.circularimageview.CircularImageView;
 
 import java.io.Serializable;
+import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 
-import static com.jsrd.talk.Utils.getDateTime;
 
 public class ChatListAdapter extends RecyclerView.Adapter<ChatListAdapter.ChatListViewHolder> {
 
@@ -53,6 +58,9 @@ public class ChatListAdapter extends RecyclerView.Adapter<ChatListAdapter.ChatLi
         String chatId = chat.getChatID();
 
         listemForMessageInRealTime(position, chatId, holder.tvLastMsg, holder.tvLastMsgTime);
+
+        setUserProfilePic(holder.civUserProfilePic);
+
     }
 
     @Override
@@ -62,6 +70,7 @@ public class ChatListAdapter extends RecyclerView.Adapter<ChatListAdapter.ChatLi
 
     class ChatListViewHolder extends RecyclerView.ViewHolder {
         TextView tvPersonName, tvLastMsg, tvLastMsgTime;
+        CircularImageView civUserProfilePic;
 
         public ChatListViewHolder(@NonNull View itemView) {
             super(itemView);
@@ -69,6 +78,7 @@ public class ChatListAdapter extends RecyclerView.Adapter<ChatListAdapter.ChatLi
             tvPersonName = itemView.findViewById(R.id.tvPersonName);
             tvLastMsg = itemView.findViewById(R.id.tvLastMsg);
             tvLastMsgTime = itemView.findViewById(R.id.tvLastMsgTime);
+            civUserProfilePic = itemView.findViewById(R.id.civUserProfilePic);
 
 
             itemView.setOnClickListener(new View.OnClickListener() {
@@ -102,8 +112,12 @@ public class ChatListAdapter extends RecyclerView.Adapter<ChatListAdapter.ChatLi
                     String sender = messageList.get(messageList.size() - 1).getSender();
                     String dateTime = messageList.get(messageList.size() - 1).getDateTime();
                     tvLastMsg.setText(message);
-                    tvLastMsgTime.setText(getDateTime(dateTime));
-                    if (isAllChatsSet && !sender.equals(curentUserUID)) {
+                    if (Utils.isToday(dateTime)) {
+                        tvLastMsgTime.setText(Utils.getTime(dateTime));
+                    } else {
+                        tvLastMsgTime.setText(Utils.getDate(dateTime));
+                    }
+                    if (isAllChatsSet && !sender.equals(curentUserUID) && Utils.isAppIsRunning(mContext)) {
                         MyNotificationManager.getInstance(mContext).displayNotification(chat.getReceiversNumber(), message, chat.getReceiversUID(), chat.getChatID());
                     }
                     if (position == chatList.size() - 1) {
@@ -114,5 +128,19 @@ public class ChatListAdapter extends RecyclerView.Adapter<ChatListAdapter.ChatLi
         });
     }
 
+    private void setUserProfilePic(CircularImageView civUserProfilePic) {
+        firebaseUtils.getReceiversProfilePic(chat.getReceiversNumber(), new ReceiverCallback() {
+            @Override
+            public void onComplete(String data) {
+                if (data != null) {
+                    Glide.with(mContext)
+                            .load(data)
+                            .into(civUserProfilePic);
+                }
+            }
+        });
+
+
+    }
 
 }
