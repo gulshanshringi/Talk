@@ -275,9 +275,6 @@ public class PhoneAuthActivity extends AppCompatActivity {
         }
     }
 
-
-
-
     private void setUserProfilePic(Uri uri) {
         mImageUri = uri;
         Glide.with(PhoneAuthActivity.this)

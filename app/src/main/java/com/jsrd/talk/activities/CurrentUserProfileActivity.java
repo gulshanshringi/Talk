@@ -40,7 +40,7 @@ public class CurrentUserProfileActivity extends AppCompatActivity {
     private Toolbar toolbar;
     private ProgressBar pbUserDetails;
     private Button btnSave;
-    private Uri mImageUri;
+    private Uri mImageUri = null;
 
 
     @Override
@@ -67,7 +67,7 @@ public class CurrentUserProfileActivity extends AppCompatActivity {
         ivUserImage.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                getCropedImageAndUpload();
+                getCropedImage();
             }
         });
 
@@ -75,9 +75,11 @@ public class CurrentUserProfileActivity extends AppCompatActivity {
         btnSave.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-
-                uploadImageToFirestore(mImageUri);
-
+                if (mImageUri != null) {
+                    uploadImageToFirestore(mImageUri);
+                } else {
+                    saveProfileDetailsToFirebase(null);
+                }
             }
         });
 
@@ -88,7 +90,6 @@ public class CurrentUserProfileActivity extends AppCompatActivity {
         onBackPressed();
         return true;
     }
-
 
     private void setUserNameAndImageIfAvailable() {
         if (user != null) {
@@ -102,7 +103,7 @@ public class CurrentUserProfileActivity extends AppCompatActivity {
         }
     }
 
-    public void getCropedImageAndUpload() {
+    public void getCropedImage() {
         // start picker to get image for cropping and then use the image in cropping activity
         CropImage.activity()
                 .setGuidelines(CropImageView.Guidelines.ON)
@@ -117,6 +118,7 @@ public class CurrentUserProfileActivity extends AppCompatActivity {
             CropImage.ActivityResult result = CropImage.getActivityResult(data);
             if (resultCode == RESULT_OK) {
                 Uri resultUri = result.getUri();
+                mImageUri = resultUri;
                 setUserProfilePic(resultUri);
                 //  uploadImageToFirestore(resultUri);
 
@@ -127,7 +129,6 @@ public class CurrentUserProfileActivity extends AppCompatActivity {
     }
 
     private void setUserProfilePic(Uri uri) {
-        // mImageUri = uri;
         Glide.with(CurrentUserProfileActivity.this)
                 .load(uri)
                 .placeholder(R.drawable.ic_user_icon)
@@ -163,8 +164,6 @@ public class CurrentUserProfileActivity extends AppCompatActivity {
                 }
             }
         });
-
-
     }
 
     private void saveProfileDetailsToFirebase(Uri uri) {
@@ -178,25 +177,34 @@ public class CurrentUserProfileActivity extends AppCompatActivity {
                             .setPhotoUri(uri)
                             .build();
                 } else {
-                    profileUpdates = new UserProfileChangeRequest.Builder()
-                            .setDisplayName(name)
-                            .build();
+                    if (!name.equals(user.getDisplayName())) {
+                        profileUpdates = new UserProfileChangeRequest.Builder()
+                                .setDisplayName(name)
+                                .build();
+                    } else {
+                          onBackPressed();
+                    }
                 }
+                if (profileUpdates != null) {
 
-                user.updateProfile(profileUpdates)
-                        .addOnCompleteListener(new OnCompleteListener<Void>() {
-                            @Override
-                            public void onComplete(@NonNull Task<Void> task) {
-                                if (task.isSuccessful()) {
-                                    if (user != null) {
-                                        FirebaseUtils ff = new FirebaseUtils(CurrentUserProfileActivity.this);
-                                        ff.putUserInfoOnFirestore(user);
-                                        pbUserDetails.setVisibility(View.GONE);
-                                        Toast.makeText(CurrentUserProfileActivity.this, "User Profile updated", Toast.LENGTH_SHORT).show();
+                    user.updateProfile(profileUpdates)
+                            .addOnCompleteListener(new OnCompleteListener<Void>() {
+                                @Override
+                                public void onComplete(@NonNull Task<Void> task) {
+                                    if (task.isSuccessful()) {
+                                        if (user != null) {
+                                            FirebaseUtils ff = new FirebaseUtils(CurrentUserProfileActivity.this);
+                                            ff.putUserInfoOnFirestore(user);
+                                            pbUserDetails.setVisibility(View.GONE);
+                                            Toast.makeText(CurrentUserProfileActivity.this, "User Profile updated", Toast.LENGTH_SHORT).show();
+                                            onBackPressed();
+                                        }
                                     }
                                 }
-                            }
-                        });
+                            });
+                }else {
+                    onBackPressed();
+                }
             } else {
                 Toast.makeText(this, "Name can not be empty", Toast.LENGTH_SHORT).show();
             }
