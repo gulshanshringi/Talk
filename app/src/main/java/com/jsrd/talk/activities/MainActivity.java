@@ -10,6 +10,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import android.content.Intent;
 import android.graphics.Color;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -26,9 +27,11 @@ import com.jsrd.talk.R;
 import com.jsrd.talk.interfaces.ChatCallBack;
 import com.jsrd.talk.model.Chat;
 import com.jsrd.talk.model.Message;
+import com.jsrd.talk.notification.MyNotificationManager;
 import com.jsrd.talk.utils.FirebaseUtils;
 import com.jsrd.talk.utils.Utils;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
@@ -40,8 +43,10 @@ public class MainActivity extends AppCompatActivity {
     private Toolbar activityMainToolbar;
     private RecyclerView chatListRecyclerView;
     private ProgressBar maProgressBar;
-    ChatListAdapter adapter;
+    private ChatListAdapter adapter;
     private boolean isListeningForChats = false;
+    private boolean isChatLoadingForFirstTime = true;
+    private List<Chat> chats;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -50,7 +55,6 @@ public class MainActivity extends AppCompatActivity {
 
         firebaseUtils = new FirebaseUtils(this);
 
-
         //setup toolbar
         setupToolbar();
 
@@ -58,7 +62,6 @@ public class MainActivity extends AppCompatActivity {
         setupRecyclerView();
 
         setupProgressBar();
-
 
         //checkPermission();
         subscribeForNotification();
@@ -139,24 +142,6 @@ public class MainActivity extends AppCompatActivity {
         maProgressBar.setIndeterminateDrawable(circle);
     }
 
-    public void getUsersChatList() {
-        maProgressBar.setVisibility(View.VISIBLE);
-        String userUID = firebaseUtils.getCurrentUserUID();
-        firebaseUtils.getUsersChatList(userUID, new ChatCallBack() {
-            @Override
-            public void onComplete(String chatID, List<Message> messageList, List<Chat> chatList) {
-                if (chatList != null) {
-                    adapter = new ChatListAdapter(MainActivity.this, chatList);
-                    chatListRecyclerView.setAdapter(adapter);
-                    maProgressBar.setVisibility(View.GONE);
-                } else {
-                    maProgressBar.setVisibility(View.GONE);
-                    Toast.makeText(MainActivity.this, "No Chats Found", Toast.LENGTH_SHORT).show();
-                }
-            }
-        });
-    }
-
     public void openChatWithSelectedUser(String UID, String number) {
         Intent chatIntent = new Intent(MainActivity.this, ChatActivity.class);
         chatIntent.putExtra("UserID", UID);
@@ -167,23 +152,30 @@ public class MainActivity extends AppCompatActivity {
 
     private void listenForChatsInRealTime() {
         if (!isListeningForChats) {
-            isListeningForChats = true;
             firebaseUtils.listenForChatsInRealTime(new ChatCallBack() {
                 @Override
                 public void onComplete(String chatID, List<Message> messageList, List<Chat> chatList) {
                     if (chatList != null) {
-                        adapter = new ChatListAdapter(MainActivity.this, chatList);
-                        chatListRecyclerView.setAdapter(adapter);
-                        maProgressBar.setVisibility(View.GONE);
-                        findViewById(R.id.rlChatsLayout).setVisibility(View.VISIBLE);
-                        findViewById(R.id.rlNoChatsLayout).setVisibility(View.GONE);
+                        if (adapter == null) {
+                            chats = chatList;
+                            adapter = new ChatListAdapter(MainActivity.this, chatList, isChatLoadingForFirstTime);
+                            chatListRecyclerView.setAdapter(adapter);
+                            maProgressBar.setVisibility(View.GONE);
+                            findViewById(R.id.rlChatsLayout).setVisibility(View.VISIBLE);
+                            findViewById(R.id.rlNoChatsLayout).setVisibility(View.GONE);
+                        } else {
+                            adapter.updateChatList(chatList);
+                            chats = chatList;
+                        }
                     } else {
                         maProgressBar.setVisibility(View.GONE);
                         findViewById(R.id.rlChatsLayout).setVisibility(View.GONE);
                         findViewById(R.id.rlNoChatsLayout).setVisibility(View.VISIBLE);
+                        isChatLoadingForFirstTime = false;
                     }
                 }
             });
+            isListeningForChats = true;
         }
     }
 
@@ -198,4 +190,6 @@ public class MainActivity extends AppCompatActivity {
         contactFragment.setStyle(DialogFragment.STYLE_NO_FRAME, R.style.Theme_AppCompat_Light_NoActionBar);
         contactFragment.show(getSupportFragmentManager(), "ContactFragmentDialog");
     }
+
+
 }

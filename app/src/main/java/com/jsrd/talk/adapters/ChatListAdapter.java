@@ -13,6 +13,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.bumptech.glide.Glide;
 import com.jsrd.talk.R;
 import com.jsrd.talk.activities.ChatActivity;
+import com.jsrd.talk.activities.MainActivity;
 import com.jsrd.talk.interfaces.ChatCallBack;
 import com.jsrd.talk.interfaces.ReceiverCallback;
 import com.jsrd.talk.model.Chat;
@@ -23,7 +24,6 @@ import com.jsrd.talk.utils.Utils;
 import com.mikhaellopez.circularimageview.CircularImageView;
 
 import java.io.Serializable;
-import java.util.Collections;
 import java.util.List;
 
 
@@ -35,12 +35,16 @@ public class ChatListAdapter extends RecyclerView.Adapter<ChatListAdapter.ChatLi
     private Chat chat;
     private boolean isAllChatsSet = false;
     private String curentUserUID;
+    private boolean isChatLoadingForFirstTime;
+    private String userID;
 
-    public ChatListAdapter(Context context, List<Chat> chatList) {
+    public ChatListAdapter(Context context, List<Chat> chatList, boolean isChatLoadingForFirstTime) {
         mContext = context;
         this.chatList = chatList;
+        this.isChatLoadingForFirstTime = isChatLoadingForFirstTime;
         firebaseUtils = new FirebaseUtils(mContext);
         curentUserUID = firebaseUtils.getCurrentUserUID();
+        userID = firebaseUtils.getCurrentUserUID();
     }
 
     @NonNull
@@ -57,7 +61,7 @@ public class ChatListAdapter extends RecyclerView.Adapter<ChatListAdapter.ChatLi
         holder.tvPersonName.setText(Utils.getNameByNumber(mContext, chat.getReceiversNumber()));
         String chatId = chat.getChatID();
 
-        listemForMessageInRealTime(position, chatId, holder.tvLastMsg, holder.tvLastMsgTime);
+        listemForMessageInRealTime(position, chatId, holder.tvLastMsg, holder.tvLastMsgTime, holder.tvUnseenMsg);
 
         setUserProfilePic(holder.civUserProfilePic);
 
@@ -70,6 +74,8 @@ public class ChatListAdapter extends RecyclerView.Adapter<ChatListAdapter.ChatLi
 
     class ChatListViewHolder extends RecyclerView.ViewHolder {
         TextView tvPersonName, tvLastMsg, tvLastMsgTime;
+        public TextView tvUnseenMsg;
+
         CircularImageView civUserProfilePic;
 
         public ChatListViewHolder(@NonNull View itemView) {
@@ -79,6 +85,7 @@ public class ChatListAdapter extends RecyclerView.Adapter<ChatListAdapter.ChatLi
             tvLastMsg = itemView.findViewById(R.id.tvLastMsg);
             tvLastMsgTime = itemView.findViewById(R.id.tvLastMsgTime);
             civUserProfilePic = itemView.findViewById(R.id.civUserProfilePic);
+            tvUnseenMsg = itemView.findViewById(R.id.tvUnseenMsg);
 
 
             itemView.setOnClickListener(new View.OnClickListener() {
@@ -97,35 +104,59 @@ public class ChatListAdapter extends RecyclerView.Adapter<ChatListAdapter.ChatLi
         }
     }
 
-    public void addChatToChatList(Chat chat) {
-        chatList.add(chat);
+    public void updateChatList(List<Chat> chatList) {
+        this.chatList = chatList;
         notifyDataSetChanged();
     }
 
-    private void listemForMessageInRealTime(int position, String chatID, TextView tvLastMsg, TextView tvLastMsgTime) {
+    private void listemForMessageInRealTime(int position, String chatID, TextView tvLastMsg, TextView tvLastMsgTime, TextView tvUnseenMsg) {
         firebaseUtils.listenForMessagesInRealTime(chatID, new ChatCallBack() {
             @Override
             public void onComplete(String chatID, List<Message> messageList, List<Chat> list) {
                 if (messageList != null) {
-                    chat.setMessages(messageList);
                     String message = messageList.get(messageList.size() - 1).getMessage();
                     String sender = messageList.get(messageList.size() - 1).getSender();
                     String dateTime = messageList.get(messageList.size() - 1).getDateTime();
-                    tvLastMsg.setText(message);
+                    if (getMessageType(message).equalsIgnoreCase("message")) {
+                        tvLastMsg.setText(getActualMessage(message));
+                    }else if (getMessageType(message).equalsIgnoreCase("image")){
+                        tvLastMsg.setText("Image");
+                    }
                     if (Utils.isToday(dateTime)) {
                         tvLastMsgTime.setText(Utils.getTime(dateTime));
                     } else {
                         tvLastMsgTime.setText(Utils.getDate(dateTime));
                     }
-                    if (isAllChatsSet && !sender.equals(curentUserUID) && Utils.isAppIsRunning(mContext)) {
+                    if (isAllChatsSet && !sender.equals(curentUserUID) || Utils.isAppIsRunning(mContext) && !isChatLoadingForFirstTime) {
                         MyNotificationManager.getInstance(mContext).displayNotification(chat.getReceiversNumber(), message, chat.getReceiversUID(), chat.getChatID());
                     }
                     if (position == chatList.size() - 1) {
                         isAllChatsSet = true;
                     }
+                    checkUnseenMessages(tvUnseenMsg, messageList);
+
+                    chat.setMessages(messageList);
                 }
             }
         });
+    }
+
+    private void checkUnseenMessages(TextView tvUnseenMsg, List<Message> messageList) {
+        int unseenMsg = 0;
+        for (Message msg : messageList) {
+            if (!userID.equalsIgnoreCase(msg.getSender())) {
+                if (!msg.isSeen()) {
+                    unseenMsg++;
+                }
+            }
+        }
+        if (unseenMsg > 0) {
+            tvUnseenMsg.setText(String.valueOf(unseenMsg));
+            tvUnseenMsg.setVisibility(View.VISIBLE);
+        } else {
+            tvUnseenMsg.setText(String.valueOf(unseenMsg));
+            tvUnseenMsg.setVisibility(View.GONE);
+        }
     }
 
     private void setUserProfilePic(CircularImageView civUserProfilePic) {
@@ -143,4 +174,16 @@ public class ChatListAdapter extends RecyclerView.Adapter<ChatListAdapter.ChatLi
 
     }
 
+
+    private String getActualMessage(String message) {
+        String[] split = message.split("-", 2);
+        return split[1];
+    }
+
+
+    private String getMessageType(String message) {
+        String[] split = message.split("-", 2);
+        // Log.i(TAG, "Spilited String is 1 : " + split[0] + " 2 : " + split[1]);
+        return split[0];
+    }
 }

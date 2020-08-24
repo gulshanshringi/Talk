@@ -12,70 +12,132 @@
         android:layout_marginRight="80dp"
         android:layout_marginBottom="15dp"
         android:background="@drawable/left_message_bubble"
-        android:orientation="horizontal"
+        android:orientation="vertical"
         android:paddingLeft="15dp"
         android:visibility="gone">
 
-        <TextView
-            android:id="@+id/leftMsgTxt"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_margin="4dp"
-            android:layout_weight="1"
-            android:textColor="@color/white"
-            android:textSize="16dp" />
+        <RelativeLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content">
+
+            <TextView
+                android:id="@+id/leftMsgTxt"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_margin="4dp"
+                android:layout_weight="1"
+                android:textColor="@color/white"
+                android:textSize="16dp"
+                android:visibility="gone" />
+
+            <ImageView
+                android:id="@+id/leftImageView"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_margin="2dp"
+                android:visibility="gone" />
+
+            <ProgressBar
+                android:id="@+id/pbLeftIV"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_centerInParent="true"
+                android:visibility="gone" />
+
+        </RelativeLayout>
 
         <TextView
             android:id="@+id/leftTimeTxt"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_gravity="bottom"
+            android:layout_gravity="right"
             android:layout_marginLeft="5dp"
             android:layout_marginRight="5dp"
             android:layout_marginBottom="2dp"
             android:layout_weight="0"
-            android:gravity="bottom"
+            android:gravity="right"
             android:textColor="@color/white"
-            android:textSize="12dp" />
+            android:textSize="8dp" />
 
     </LinearLayout>
 
     <LinearLayout
         android:id="@+id/rightMsgLayout"
-        android:layout_width="wrap_content"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_gravity="right"
-        android:layout_marginLeft="80dp"
-        android:layout_marginRight="10dp"
         android:layout_marginBottom="15dp"
-        android:background="@drawable/right_message_bubble"
-        android:orientation="horizontal"
-        android:paddingLeft="5dp"
-        android:paddingRight="15dp"
+        android:orientation="vertical"
         android:visibility="gone">
 
-        <TextView
-            android:id="@+id/rightMsgTxt"
-            android:layout_width="match_parent"
+        <LinearLayout
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_margin="4dp"
-            android:layout_weight="1"
-            android:textColor="@color/white"
-            android:textSize="16dp" />
+            android:layout_gravity="right"
+            android:layout_marginLeft="80dp"
+            android:layout_marginRight="10dp"
+            android:background="@drawable/right_message_bubble"
+            android:orientation="vertical"
+            android:paddingLeft="5dp"
+            android:paddingRight="15dp">
+
+            <RelativeLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content">
+
+                <TextView
+                    android:id="@+id/rightMsgTxt"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_margin="4dp"
+                    android:layout_weight="1"
+                    android:textColor="@color/white"
+                    android:textSize="16dp"
+                    android:visibility="gone" />
+
+                <ImageView
+                    android:id="@+id/rightImageView"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_margin="2dp"
+                    android:visibility="gone" />
+
+
+                <ProgressBar
+                    android:id="@+id/pbRightIV"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_centerInParent="true"
+                    android:visibility="gone" />
+
+            </RelativeLayout>
+
+            <TextView
+                android:id="@+id/rightTimeTxt"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="right"
+                android:layout_marginLeft="5dp"
+                android:layout_marginRight="5dp"
+                android:layout_marginBottom="2dp"
+                android:gravity="right"
+                android:textColor="@color/white"
+                android:textSize="8dp" />
+
+        </LinearLayout>
 
         <TextView
-            android:id="@+id/rightTimeTxt"
-            android:layout_width="match_parent"
+            android:id="@+id/seenIndicatorTxt"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_gravity="bottom"
-            android:layout_marginLeft="5dp"
-            android:layout_marginRight="5dp"
-            android:layout_marginBottom="2dp"
-            android:layout_weight="0"
-            android:gravity="bottom"
-            android:textColor="@color/white"
-            android:textSize="12dp" />
+            android:layout_gravity="right"
+            android:layout_marginRight="10dp"
+            android:text="Seen"
+            android:textColor="@color/grey"
+            android:textSize="10dp"
+            android:visibility="gone" />
 
     </LinearLayout>
+
 
 </LinearLayout>

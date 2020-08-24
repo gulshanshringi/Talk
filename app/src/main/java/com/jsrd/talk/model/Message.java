@@ -9,6 +9,7 @@ public class Message implements Serializable {
     private String dateTime;
     private String sender;
     private String message;
+    private boolean seen = false;
 
     public Message() {
         //default constructor
@@ -30,5 +31,17 @@ public class Message implements Serializable {
 
     public String getMessage() {
         return message;
+    }
+
+    public void setMessage(String message) {
+        this.message = message;
+    }
+
+    public boolean isSeen() {
+        return seen;
+    }
+
+    public void setSeen(boolean seen) {
+        this.seen = seen;
     }
 }

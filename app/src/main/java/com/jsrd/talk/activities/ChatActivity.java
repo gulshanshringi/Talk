@@ -6,6 +6,7 @@ import android.media.Ringtone;
 import android.media.RingtoneManager;
 import android.net.Uri;
 import android.os.Bundle;
+import android.provider.MediaStore;
 import android.util.Log;
 import android.view.View;
 import android.widget.EditText;
@@ -14,6 +15,7 @@ import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -24,6 +26,7 @@ import com.github.ybq.android.spinkit.style.Circle;
 import com.jsrd.talk.adapters.ChatAdapter;
 import com.jsrd.talk.R;
 import com.jsrd.talk.interfaces.ChatCallBack;
+import com.jsrd.talk.interfaces.ImageUploadCallBack;
 import com.jsrd.talk.interfaces.StatusCallBack;
 import com.jsrd.talk.model.Chat;
 import com.jsrd.talk.model.Message;
@@ -35,6 +38,7 @@ import com.jsrd.talk.notification.Sender;
 import com.jsrd.talk.utils.FirebaseUtils;
 import com.jsrd.talk.utils.Utils;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import retrofit2.Call;
@@ -47,6 +51,7 @@ import static com.jsrd.talk.utils.Utils.isToday;
 
 public class ChatActivity extends AppCompatActivity {
 
+    private final String TAG = "ChatActivity";
     final private String FCM_API_URL = "https://fcm.googleapis.com/";
     private ProgressBar caProgressBar;
     private RecyclerView chatListRecyclerView;
@@ -64,6 +69,8 @@ public class ChatActivity extends AppCompatActivity {
     private ImageButton sendBtn;
     private boolean isSetupComplete = false;
     private TextView tvToolbarTitle, tvStatus;
+    private List<Message> messages;
+    private ChatAdapter adapter;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -133,6 +140,12 @@ public class ChatActivity extends AppCompatActivity {
     }
 
     @Override
+    public void onBackPressed() {
+        super.onBackPressed();
+        finish();
+    }
+
+    @Override
     protected void onStop() {
         super.onStop();
         chatingWith = null;
@@ -181,7 +194,7 @@ public class ChatActivity extends AppCompatActivity {
 
     private void setChatData(List<Message> messageList) {
         caProgressBar.setVisibility(View.VISIBLE);
-        ChatAdapter adapter = new ChatAdapter(ChatActivity.this, messageList, currentUserID);
+        adapter = new ChatAdapter(ChatActivity.this, messageList, currentUserID, chatId);
         chatListRecyclerView.setAdapter(adapter);
         caProgressBar.setVisibility(View.GONE);
         chatListRecyclerView.smoothScrollToPosition(messageList.size() - 1);
@@ -192,13 +205,34 @@ public class ChatActivity extends AppCompatActivity {
     }
 
     public void sendMessage(View view) {
-        final String message = etMsg.getText().toString();
+        final String message = "Message-" + etMsg.getText().toString();
         etMsg.setText("");
         if (message.length() > 0) {
             firebaseUtils.sendMessage(receiversNumber, currentUserNumber, message, chatId, new ChatCallBack() {
                 @Override
                 public void onComplete(String chatID, List<Message> messageList, List<Chat> chatList) {
                     if (chatID != null) {
+                        chatId = chatID;
+                        sendNotification(message, chatID);
+                        listenForMessagesInRealTime(chatID);
+                    }
+                }
+            });
+
+        } else {
+            Toast.makeText(this, "Message can not be empty", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private void sendMedia(String url, String type) {
+        String message = type + "-" + url;
+        if (message.length() > 0) {
+            Log.i(TAG, "Sending media URL with message");
+            firebaseUtils.sendMessage(receiversNumber, currentUserNumber, message, chatId, new ChatCallBack() {
+                @Override
+                public void onComplete(String chatID, List<Message> messageList, List<Chat> chatList) {
+                    if (chatID != null) {
+                        Log.i(TAG, "media sent succesfully");
                         chatId = chatID;
                         sendNotification(message, chatID);
                         listenForMessagesInRealTime(chatID);
@@ -245,7 +279,7 @@ public class ChatActivity extends AppCompatActivity {
                         setChatData(messageList);
                         String currentUserUID = firebaseUtils.getCurrentUserUID();
                         String sender = messageList.get(messageList.size() - 1).getSender();
-                        if (isSetupComplete && !sender.equals(currentUserUID)) {
+                        if (isSetupComplete && !sender.equals(currentUserUID) && messages.size() < messageList.size()) {
                             try {
                                 Uri notification = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
                                 Ringtone r = RingtoneManager.getRingtone(getApplicationContext(), notification);
@@ -255,9 +289,57 @@ public class ChatActivity extends AppCompatActivity {
                             }
                         }
                         isSetupComplete = true;
+                        messages = messageList;
                     }
                 }
             });
         }
     }
+
+    public void accessImagesAndVideos(View view) {
+        Intent intent = new Intent(Intent.ACTION_PICK, android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
+        intent.setType("image/*");
+        startActivityForResult(Intent.createChooser(intent, "Select File"), 101);
+
+
+//        Intent gallary = new Intent();
+//        gallary.setAction(Intent.ACTION_PICK);
+//        gallary.setType("image/* video/*");
+//        gallary.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+//        startActivityForResult(gallary, 101);
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == 101 && resultCode == RESULT_OK && data != null) {
+            Uri selectedImage = data.getData();
+            Log.i(TAG, "Image Selected From Gallary");
+            String msg = "upload-" + selectedImage.toString();
+            String userID = firebaseUtils.getCurrentUserUID();
+            String dateTime = Utils.getCurrentDateAndTime();
+            Message message = new Message(msg, userID, dateTime);
+            if (adapter != null) {
+                messages.add(message);
+                adapter.updateMessages(messages);
+                chatListRecyclerView.smoothScrollToPosition(messages.size() - 1);
+            } else {
+                messages = new ArrayList<>();
+                messages.add(message);
+                setChatData(messages);
+            }
+            uploadImageToFirebase(selectedImage);
+        }
+    }
+
+    private void uploadImageToFirebase(Uri imageUri) {
+        firebaseUtils.uploadImageToFirestore(imageUri, new ImageUploadCallBack() {
+            @Override
+            public void onImageUpload(Uri uri) {
+                Log.i(TAG, "Image download Uri received");
+                sendMedia(uri.toString(), "Image");
+            }
+        });
+    }
+
 }

@@ -1,7 +1,11 @@
 package com.jsrd.talk.utils;
 
+import android.content.ContentResolver;
 import android.content.Context;
+import android.net.Uri;
 import android.util.Log;
+import android.view.View;
+import android.webkit.MimeTypeMap;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -17,7 +21,11 @@ import com.google.firebase.firestore.EventListener;
 import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.FirebaseFirestoreException;
+import com.google.firebase.storage.FirebaseStorage;
+import com.google.firebase.storage.StorageReference;
+import com.google.firebase.storage.UploadTask;
 import com.jsrd.talk.interfaces.ChatCallBack;
+import com.jsrd.talk.interfaces.ImageUploadCallBack;
 import com.jsrd.talk.interfaces.ProgressSuccessCallBack;
 import com.jsrd.talk.interfaces.ReceiverCallback;
 import com.jsrd.talk.interfaces.StatusCallBack;
@@ -117,31 +125,31 @@ public class FirebaseUtils {
                 document("list").
                 get().
                 addOnCompleteListener(new OnCompleteListener<DocumentSnapshot>() {
-            @Override
-            public void onComplete(@NonNull Task<DocumentSnapshot> task) {
-                if (task.isSuccessful()) {
-                    boolean isNumIsRegistered = false;
-                    String profilePic = null;
-                    DocumentSnapshot document = task.getResult();
-                    List<Map<String, Object>> usersList = (List<Map<String, Object>>) document.get("UsersList");
+                    @Override
+                    public void onComplete(@NonNull Task<DocumentSnapshot> task) {
+                        if (task.isSuccessful()) {
+                            boolean isNumIsRegistered = false;
+                            String profilePic = null;
+                            DocumentSnapshot document = task.getResult();
+                            List<Map<String, Object>> usersList = (List<Map<String, Object>>) document.get("UsersList");
 
-                    for (Map<String, Object> user : usersList) {
-                        String num = (String) user.get("userNumber");
-                        if (num.contains(number) || num.equals(number)) {
-                            isNumIsRegistered = true;
-                            profilePic = (String) user.get("profilePic");
+                            for (Map<String, Object> user : usersList) {
+                                String num = (String) user.get("userNumber");
+                                if (num.contains(number) || num.equals(number)) {
+                                    isNumIsRegistered = true;
+                                    profilePic = (String) user.get("profilePic");
+                                }
+                            }
+                            if (isNumIsRegistered && profilePic != null) {
+                                callBack.onComplete(profilePic);
+                            } else {
+                                callBack.onComplete(null);
+                            }
+                        } else {
+                            callBack.onComplete(null);
                         }
                     }
-                    if (isNumIsRegistered && profilePic != null) {
-                        callBack.onComplete(profilePic);
-                    } else {
-                        callBack.onComplete(null);
-                    }
-                } else {
-                    callBack.onComplete(null);
-                }
-            }
-        });
+                });
     }
 
 
@@ -213,7 +221,7 @@ public class FirebaseUtils {
 
                         db.collection("Users").
                                 document(userUID).
-                                update("chatList", chatList).
+                                set(chatListDoc).
                                 addOnSuccessListener(new OnSuccessListener<Void>() {
                                     @Override
                                     public void onSuccess(Void aVoid) {
@@ -272,7 +280,7 @@ public class FirebaseUtils {
                                 });
                     } else {
                         Map<String, Object> addChatDataToList = new HashMap<>();
-                        addChatDataToList.put("ChatList", FieldValue.arrayUnion(chatData));
+                        addChatDataToList.put("chatList", FieldValue.arrayUnion(chatData));
 
                         db.collection("Users").
                                 document(receiversUID)
@@ -418,23 +426,45 @@ public class FirebaseUtils {
         });
     }
 
-//    public void getProfilePicOfUsers(ReceiverCallback callBack) {
-//        String userID = getCurrentUserUID();
-//        db.collection("Users").document(userID).get().addOnCompleteListener(new OnCompleteListener<DocumentSnapshot>() {
-//            @Override
-//            public void onComplete(@NonNull Task<DocumentSnapshot> task) {
-//                if (task.isSuccessful()) {
-//                    DocumentSnapshot documnet = task.getResult();
-//
-//                    User user = documnet.toObject(User.class);
-//                    if (user != null) {
-//                        Log.i(TAG, user.getUserNumber());
-//                    }
-//
-//                }
-//            }
-//        });
-//
-//    }
 
+    public void markedMessagesAsSeen(List<Message> messageList, String chatID) {
+        if (chatID != null) {
+            Log.i("ChatAdapter", "marked");
+            MessageListDoc messageListDoc = new MessageListDoc(messageList);
+
+            db.collection("Chats").document(chatID).set(messageListDoc);
+        }
+    }
+
+    public void uploadImageToFirestore(Uri imageUri, ImageUploadCallBack callBack) {
+        Log.i(TAG, "Image Uri received for upload");
+        StorageReference storageReference = FirebaseStorage.getInstance().getReference("Images");
+        StorageReference fileReference = storageReference.child(System.currentTimeMillis() + "." + getFileExtension(imageUri));
+
+        UploadTask uploadTask = fileReference.putFile(imageUri);
+
+        uploadTask.addOnCompleteListener(new OnCompleteListener<UploadTask.TaskSnapshot>() {
+            @Override
+            public void onComplete(@NonNull Task<UploadTask.TaskSnapshot> task) {
+                if (task.isSuccessful()) {
+                    Log.i(TAG, "Image uploaded to firebase storage");
+                    fileReference.getDownloadUrl().addOnSuccessListener(new OnSuccessListener<Uri>() {
+                        @Override
+                        public void onSuccess(Uri uri) {
+                            callBack.onImageUpload(uri);
+                        }
+                    });
+                }
+            }
+        });
+
+
+    }
+
+    private String getFileExtension(Uri uri) {
+        ContentResolver cr = mContext.getContentResolver();
+        MimeTypeMap mime = MimeTypeMap.getSingleton();
+
+        return mime.getExtensionFromMimeType(cr.getType(uri));
+    }
 }

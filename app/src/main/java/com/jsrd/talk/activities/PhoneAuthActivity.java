@@ -45,6 +45,7 @@ import com.google.firebase.storage.FirebaseStorage;
 import com.google.firebase.storage.StorageReference;
 import com.google.firebase.storage.UploadTask;
 import com.jsrd.talk.R;
+import com.jsrd.talk.interfaces.ImageUploadCallBack;
 import com.jsrd.talk.utils.FirebaseUtils;
 import com.theartofdev.edmodo.cropper.CropImage;
 import com.theartofdev.edmodo.cropper.CropImageView;
@@ -283,35 +284,39 @@ public class PhoneAuthActivity extends AppCompatActivity {
                 .into(ivUserImage);
     }
 
-    private String getFileExtension(Uri uri) {
-        ContentResolver cr = getContentResolver();
-        MimeTypeMap mime = MimeTypeMap.getSingleton();
-
-        return mime.getExtensionFromMimeType(cr.getType(uri));
-    }
 
     private void uploadImageToFirestore(Uri imageUri) {
         pbUserDetails.setVisibility(View.VISIBLE);
         ivUserImage.setEnabled(false);
         btnSave.setEnabled(false);
-        StorageReference storageReference = FirebaseStorage.getInstance().getReference("ProfileImage");
-        StorageReference fileReference = storageReference.child(System.currentTimeMillis() + "." + getFileExtension(imageUri));
 
-        UploadTask uploadTask = fileReference.putFile(imageUri);
-
-        uploadTask.addOnCompleteListener(new OnCompleteListener<UploadTask.TaskSnapshot>() {
+        FirebaseUtils firebaseUtils = new FirebaseUtils(this);
+        firebaseUtils.uploadImageToFirestore(imageUri, new ImageUploadCallBack() {
             @Override
-            public void onComplete(@NonNull Task<UploadTask.TaskSnapshot> task) {
-                if (task.isSuccessful()) {
-                    fileReference.getDownloadUrl().addOnSuccessListener(new OnSuccessListener<Uri>() {
-                        @Override
-                        public void onSuccess(Uri uri) {
-                            saveProfileDetailsToFirebase(uri);
-                        }
-                    });
-                }
+            public void onImageUpload(Uri uri) {
+                saveProfileDetailsToFirebase(uri);
             }
         });
+
+//
+//        StorageReference storageReference = FirebaseStorage.getInstance().getReference("ProfileImage");
+//        StorageReference fileReference = storageReference.child(System.currentTimeMillis() + "." + getFileExtension(imageUri));
+//
+//        UploadTask uploadTask = fileReference.putFile(imageUri);
+//
+//        uploadTask.addOnCompleteListener(new OnCompleteListener<UploadTask.TaskSnapshot>() {
+//            @Override
+//            public void onComplete(@NonNull Task<UploadTask.TaskSnapshot> task) {
+//                if (task.isSuccessful()) {
+//                    fileReference.getDownloadUrl().addOnSuccessListener(new OnSuccessListener<Uri>() {
+//                        @Override
+//                        public void onSuccess(Uri uri) {
+//
+//                        }
+//                    });
+//                }
+//            }
+//        });
 
 
     }
