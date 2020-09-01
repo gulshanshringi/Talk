@@ -36,6 +36,7 @@ import com.jsrd.talk.model.MessageListDoc;
 import com.jsrd.talk.model.User;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -207,9 +208,9 @@ public class FirebaseUtils {
     public void putChatDataOnFirebaseForSender(final String receiversNumber, String sendersNumber,
                                                String receiversUID, String chatId, final ProgressSuccessCallBack callBack) {
         final String userUID = getCurrentUserUID();
-
+        String currentDateTime = getCurrentDateAndTime();
         if (chatId.length() > 0) {
-            Chat chatData = new Chat(chatId, receiversUID, receiversNumber, sendersNumber);
+            Chat chatData = new Chat(chatId, receiversUID, receiversNumber, sendersNumber, currentDateTime);
 
             getUsersChatList(userUID, new ChatCallBack() {
                 @Override
@@ -257,9 +258,9 @@ public class FirebaseUtils {
     public void putChatDataOnFirebaseForReceiver(String receiversUID, String receiversNumber, String chatId, final ProgressSuccessCallBack callBack) {
         final String userUID = getCurrentUserUID();
         String userNumber = getCurrentUserNumber();
-
+        String currentDateTime = getCurrentDateAndTime();
         if (chatId.length() > 0) {
-            Chat chatData = new Chat(chatId, userUID, userNumber, receiversNumber);
+            Chat chatData = new Chat(chatId, userUID, userNumber, receiversNumber, currentDateTime);
 
             getUsersChatList(receiversUID, new ChatCallBack() {
                 @Override
@@ -368,7 +369,7 @@ public class FirebaseUtils {
                 if (snapshot != null && snapshot.exists() && snapshot.toObject(MessageListDoc.class) != null) {
                     List<Message> messageList = snapshot.toObject(MessageListDoc.class).messageList;
                     if (messageList != null) {
-                        callBack.onComplete(null, messageList, null);
+                        callBack.onComplete(chatId, messageList, null);
                     } else {
                         callBack.onComplete(null, null, null);
                     }
@@ -467,4 +468,20 @@ public class FirebaseUtils {
 
         return mime.getExtensionFromMimeType(cr.getType(uri));
     }
+
+    public void updateChatDateTime(List<Chat> chatList) {
+        List<Chat> chats = chatList;
+        String userID = getCurrentUserUID();
+        Collections.sort(chats);
+        for (Chat chat : chats) {
+            chat.setMessages(null);
+        }
+        ChatListDoc chatListDoc = new ChatListDoc(chats);
+
+        db.collection("Users").
+                document(userID).
+                set(chatListDoc);
+    }
+
+
 }

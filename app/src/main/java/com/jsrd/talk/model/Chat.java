@@ -3,6 +3,8 @@ package com.jsrd.talk.model;
 import com.google.gson.annotations.SerializedName;
 
 import java.io.Serializable;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.List;
 
 public class Chat implements Serializable, Comparable<Chat> {
@@ -11,16 +13,18 @@ public class Chat implements Serializable, Comparable<Chat> {
     private String receiversUID;
     private String receiversNumber;
     private String sendersNumber;
+    private String dateTime;
     private List<Message> messages;
 
     public Chat() {
     }
 
-    public Chat(String chatID, String receiversUID, String receiversNumber, String sendersNumber) {
+    public Chat(String chatID, String receiversUID, String receiversNumber, String sendersNumber, String dateTime) {
         this.chatID = chatID;
         this.receiversUID = receiversUID;
         this.receiversNumber = receiversNumber;
         this.sendersNumber = sendersNumber;
+        this.dateTime = dateTime;
     }
 
     public String getChatID() {
@@ -55,6 +59,14 @@ public class Chat implements Serializable, Comparable<Chat> {
         this.sendersNumber = sendersNumber;
     }
 
+    public String getDateTime() {
+        return dateTime;
+    }
+
+    public void setDateTime(String dateTime) {
+        this.dateTime = dateTime;
+    }
+
     public List<Message> getMessages() {
         return messages;
     }
@@ -65,6 +77,12 @@ public class Chat implements Serializable, Comparable<Chat> {
 
     @Override
     public int compareTo(Chat chat) {
-        return getMessages().get(getMessages().size() - 1).getDateTime().compareTo(chat.getMessages().get(chat.getMessages().size() - 1).getDateTime());
+        SimpleDateFormat f = new SimpleDateFormat("dd/MM/yyyy_HH:mm:ss");
+        try {
+            return f.parse(chat.getDateTime()).compareTo(f.parse(getDateTime()));
+        } catch (ParseException e) {
+            e.printStackTrace();
+        }
+        return 0;
     }
 }

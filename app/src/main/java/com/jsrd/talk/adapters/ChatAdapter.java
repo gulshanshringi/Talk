@@ -50,6 +50,7 @@ public class ChatAdapter extends RecyclerView.Adapter<ChatAdapter.ChatViewHolder
         this.currentUserUID = currentUserUID;
         this.chatId = chatId;
         firebaseUtils = new FirebaseUtils(mContext);
+        setHasStableIds(true);
     }
 
 
@@ -65,6 +66,8 @@ public class ChatAdapter extends RecyclerView.Adapter<ChatAdapter.ChatViewHolder
         Message message = messageList.get(position);
 
         String sender = message.getSender();
+
+       // holder.setIsRecyclable(false);
 
         if (sender.equals(currentUserUID)) {
             holder.rightMsgLayout.setVisibility(View.VISIBLE);
@@ -105,6 +108,8 @@ public class ChatAdapter extends RecyclerView.Adapter<ChatAdapter.ChatViewHolder
             }
             if (message.isSeen()) {
                 holder.seenIndicatorTxt.setVisibility(View.VISIBLE);
+            } else {
+                holder.seenIndicatorTxt.setVisibility(View.GONE);
             }
 
         } else {
@@ -117,9 +122,9 @@ public class ChatAdapter extends RecyclerView.Adapter<ChatAdapter.ChatViewHolder
                 holder.leftMsgTxt.setVisibility(View.GONE);
                 holder.leftMsgLayout.setVisibility(View.VISIBLE);
                 holder.leftImageView.setVisibility(View.VISIBLE);
-            } else {
+            } else if (messageType.equalsIgnoreCase("message")) {
                 String msg = getActualMessage(message.getMessage());
-                holder.rightMsgTxt.setText(msg);
+                holder.leftMsgTxt.setText(msg);
                 holder.leftMsgTxt.setVisibility(View.VISIBLE);
                 holder.leftMsgLayout.setVisibility(View.VISIBLE);
                 holder.leftImageView.setVisibility(View.GONE);
@@ -131,6 +136,7 @@ public class ChatAdapter extends RecyclerView.Adapter<ChatAdapter.ChatViewHolder
                 holder.leftTimeTxt.setText(Utils.getDate(dateTime));
             }
         }
+
         if ((messageList.size() - 1) == position) {
             markedNewMessageesAsSeen();
         }
@@ -139,6 +145,16 @@ public class ChatAdapter extends RecyclerView.Adapter<ChatAdapter.ChatViewHolder
     @Override
     public int getItemCount() {
         return messageList.size();
+    }
+
+    @Override
+    public long getItemId(int position) {
+        return position;
+    }
+
+    @Override
+    public int getItemViewType(int position) {
+        return position;
     }
 
     class ChatViewHolder extends RecyclerView.ViewHolder {
@@ -180,7 +196,7 @@ public class ChatAdapter extends RecyclerView.Adapter<ChatAdapter.ChatViewHolder
         if (chatId != null) {
             isNewMessage = false;
             for (Message msg : messageList) {
-                if (!msg.getSender().equals(currentUserUID)) {
+                if (!msg.getSender().equalsIgnoreCase(currentUserUID) && currentUserUID != null && msg.getSender() != null) {
                     if (!msg.isSeen()) {
                         msg.setSeen(true);
                         isNewMessage = true;

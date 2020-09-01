@@ -1,6 +1,8 @@
 package com.jsrd.talk.activities;
 
 import android.content.Intent;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.media.Ringtone;
 import android.media.RingtoneManager;
@@ -36,8 +38,11 @@ import com.jsrd.talk.notification.Data;
 import com.jsrd.talk.notification.MyResponse;
 import com.jsrd.talk.notification.Sender;
 import com.jsrd.talk.utils.FirebaseUtils;
+import com.jsrd.talk.utils.ImageResizer;
 import com.jsrd.talk.utils.Utils;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -89,7 +94,7 @@ public class ChatActivity extends AppCompatActivity {
         receiversUserID = getIntent().getStringExtra("UserID");
         receiversNumber = getIntent().getStringExtra("UserNumber");
         chatId = getIntent().getStringExtra("ChatID");
-
+        chatingWith = receiversNumber;
 
         //setup toolbar
         chatActivityToolbar.setTitle("");
@@ -111,26 +116,27 @@ public class ChatActivity extends AppCompatActivity {
         layoutManager.setStackFromEnd(true);
         chatListRecyclerView.setLayoutManager(layoutManager);
 
-
         chat = (Chat) getIntent().getSerializableExtra("Chat");
-
-        if (chat != null) {
-            chatId = chat.getChatID();
-            if (chat.getMessages() != null) {
-                setChatData(chat.getMessages());
-            }
-        } else if (chatId != null) {
-            listenForMessagesInRealTime(chatId);
-        }
 
         token += receiversUserID;
 
         currentUserNumber = firebaseUtils.getCurrentUserNumber();
         currentUserID = firebaseUtils.getCurrentUserUID();
 
-        listenForStatusInRealTime(receiversUserID);
-
         apiService = Client.getClient(FCM_API_URL).create(APIService.class);
+
+        if (chat != null) {
+            chatId = chat.getChatID();
+            if (chat.getMessages() != null) {
+                setChatData(chat.getMessages());
+            }else {
+                listenForMessagesInRealTime(chatId);
+            }
+        } else if (chatId != null) {
+            listenForMessagesInRealTime(chatId);
+        }
+
+        listenForStatusInRealTime(receiversUserID);
     }
 
     @Override
@@ -142,6 +148,7 @@ public class ChatActivity extends AppCompatActivity {
     @Override
     public void onBackPressed() {
         super.onBackPressed();
+        chatingWith = null;
         finish();
     }
 
@@ -279,15 +286,15 @@ public class ChatActivity extends AppCompatActivity {
                         setChatData(messageList);
                         String currentUserUID = firebaseUtils.getCurrentUserUID();
                         String sender = messageList.get(messageList.size() - 1).getSender();
-                        if (isSetupComplete && !sender.equals(currentUserUID) && messages.size() < messageList.size()) {
-                            try {
-                                Uri notification = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
-                                Ringtone r = RingtoneManager.getRingtone(getApplicationContext(), notification);
-                                r.play();
-                            } catch (Exception e) {
-                                e.printStackTrace();
-                            }
-                        }
+//                        if (isSetupComplete && !sender.equals(currentUserUID) && messages.size() < messageList.size()) {
+//                            try {
+//                                Uri notification = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
+//                                Ringtone r = RingtoneManager.getRingtone(getApplicationContext(), notification);
+//                                r.play();
+//                            } catch (Exception e) {
+//                                e.printStackTrace();
+//                            }
+//                        }
                         isSetupComplete = true;
                         messages = messageList;
                     }
@@ -328,11 +335,20 @@ public class ChatActivity extends AppCompatActivity {
                 messages.add(message);
                 setChatData(messages);
             }
-            uploadImageToFirebase(selectedImage);
+            try {
+                Bitmap fullSizeImage = MediaStore.Images.Media.getBitmap(this.getContentResolver(), selectedImage);
+                uploadImageToFirebase(fullSizeImage);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
     }
 
-    private void uploadImageToFirebase(Uri imageUri) {
+    private void uploadImageToFirebase(Bitmap fullSizeImage) {
+
+        Bitmap reducedImage = ImageResizer.reduceBitmapSize(fullSizeImage, 360000);
+        Uri imageUri = getImageUri(reducedImage);
+
         firebaseUtils.uploadImageToFirestore(imageUri, new ImageUploadCallBack() {
             @Override
             public void onImageUpload(Uri uri) {
@@ -342,4 +358,10 @@ public class ChatActivity extends AppCompatActivity {
         });
     }
 
+    public Uri getImageUri(Bitmap inImage) {
+        ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+        inImage.compress(Bitmap.CompressFormat.JPEG, 100, bytes);
+        String path = MediaStore.Images.Media.insertImage(this.getContentResolver(), inImage, "Title", null);
+        return Uri.parse(path);
+    }
 }

@@ -33,13 +33,7 @@ public class FirebaseCloudMessagingService extends FirebaseMessagingService {
         String chatId = remoteMessage.getData().get("chatID");
         String userId = remoteMessage.getData().get("userID");
 
+        MyNotificationManager.getInstance(this).displayNotification(title, body, userId, chatId);
 
-        if (isAppIsRunning(getApplicationContext())) {
-
-        } else {
-            MyNotificationManager.getInstance(this).displayNotification(title, body, userId, chatId);
-        }
     }
-
-
 }

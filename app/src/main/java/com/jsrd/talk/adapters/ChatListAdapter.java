@@ -2,6 +2,7 @@ package com.jsrd.talk.adapters;
 
 import android.content.Context;
 import android.content.Intent;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -24,6 +25,7 @@ import com.jsrd.talk.utils.Utils;
 import com.mikhaellopez.circularimageview.CircularImageView;
 
 import java.io.Serializable;
+import java.util.Collections;
 import java.util.List;
 
 
@@ -37,6 +39,7 @@ public class ChatListAdapter extends RecyclerView.Adapter<ChatListAdapter.ChatLi
     private String curentUserUID;
     private boolean isChatLoadingForFirstTime;
     private String userID;
+
 
     public ChatListAdapter(Context context, List<Chat> chatList, boolean isChatLoadingForFirstTime) {
         mContext = context;
@@ -72,7 +75,7 @@ public class ChatListAdapter extends RecyclerView.Adapter<ChatListAdapter.ChatLi
         return chatList.size();
     }
 
-    class ChatListViewHolder extends RecyclerView.ViewHolder {
+    public class ChatListViewHolder extends RecyclerView.ViewHolder {
         TextView tvPersonName, tvLastMsg, tvLastMsgTime;
         public TextView tvUnseenMsg;
 
@@ -96,7 +99,8 @@ public class ChatListAdapter extends RecyclerView.Adapter<ChatListAdapter.ChatLi
                     Intent chatIntent = new Intent(mContext, ChatActivity.class);
                     chatIntent.putExtra("UserNumber", number);
                     chatIntent.putExtra("UserID", chatList.get(getAdapterPosition()).getReceiversUID());
-                    chatIntent.putExtra("Chat", (Serializable) chatList.get(getAdapterPosition()));
+                    chatIntent.putExtra("ChatID", chatList.get(getAdapterPosition()).getChatID());
+                    chatIntent.putExtra("Chat", chatList.get(getAdapterPosition()));
                     mContext.startActivity(chatIntent);
                 }
             });
@@ -119,7 +123,7 @@ public class ChatListAdapter extends RecyclerView.Adapter<ChatListAdapter.ChatLi
                     String dateTime = messageList.get(messageList.size() - 1).getDateTime();
                     if (getMessageType(message).equalsIgnoreCase("message")) {
                         tvLastMsg.setText(getActualMessage(message));
-                    }else if (getMessageType(message).equalsIgnoreCase("image")){
+                    } else if (getMessageType(message).equalsIgnoreCase("image")) {
                         tvLastMsg.setText("Image");
                     }
                     if (Utils.isToday(dateTime)) {
@@ -127,15 +131,21 @@ public class ChatListAdapter extends RecyclerView.Adapter<ChatListAdapter.ChatLi
                     } else {
                         tvLastMsgTime.setText(Utils.getDate(dateTime));
                     }
-                    if (isAllChatsSet && !sender.equals(curentUserUID) || Utils.isAppIsRunning(mContext) && !isChatLoadingForFirstTime) {
-                        MyNotificationManager.getInstance(mContext).displayNotification(chat.getReceiversNumber(), message, chat.getReceiversUID(), chat.getChatID());
+
+                    if (chat.getChatID().equalsIgnoreCase(chatID) && !chat.getDateTime().equalsIgnoreCase(dateTime)) {
+                        chat.setDateTime(dateTime);
+                        firebaseUtils.updateChatDateTime(chatList);
                     }
+
+//                    if (isAllChatsSet && !sender.equals(curentUserUID) || Utils.isAppIsRunning(mContext) && !isChatLoadingForFirstTime) {
+//                        MyNotificationManager.getInstance(mContext).displayNotification(chat.getReceiversNumber(), message, chat.getReceiversUID(), chat.getChatID());
+//                    }
                     if (position == chatList.size() - 1) {
                         isAllChatsSet = true;
                     }
-                    checkUnseenMessages(tvUnseenMsg, messageList);
-
                     chat.setMessages(messageList);
+
+                    checkUnseenMessages(tvUnseenMsg, messageList);
                 }
             }
         });

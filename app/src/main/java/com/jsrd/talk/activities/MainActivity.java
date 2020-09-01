@@ -156,17 +156,18 @@ public class MainActivity extends AppCompatActivity {
                 @Override
                 public void onComplete(String chatID, List<Message> messageList, List<Chat> chatList) {
                     if (chatList != null) {
-                        if (adapter == null) {
-                            chats = chatList;
-                            adapter = new ChatListAdapter(MainActivity.this, chatList, isChatLoadingForFirstTime);
-                            chatListRecyclerView.setAdapter(adapter);
-                            maProgressBar.setVisibility(View.GONE);
-                            findViewById(R.id.rlChatsLayout).setVisibility(View.VISIBLE);
-                            findViewById(R.id.rlNoChatsLayout).setVisibility(View.GONE);
-                        } else {
-                            adapter.updateChatList(chatList);
-                            chats = chatList;
-                        }
+                        // Collections.sort(chatList);
+                        //   if (adapter == null) {
+                        chats = chatList;
+                        adapter = new ChatListAdapter(MainActivity.this, chatList, isChatLoadingForFirstTime);
+                        chatListRecyclerView.setAdapter(adapter);
+                        maProgressBar.setVisibility(View.GONE);
+                        findViewById(R.id.rlChatsLayout).setVisibility(View.VISIBLE);
+                        findViewById(R.id.rlNoChatsLayout).setVisibility(View.GONE);
+//                        } else {
+//                            adapter.updateChatList(chatList);
+//                            chats = chatList;
+//                        }
                     } else {
                         maProgressBar.setVisibility(View.GONE);
                         findViewById(R.id.rlChatsLayout).setVisibility(View.GONE);
@@ -190,6 +191,4 @@ public class MainActivity extends AppCompatActivity {
         contactFragment.setStyle(DialogFragment.STYLE_NO_FRAME, R.style.Theme_AppCompat_Light_NoActionBar);
         contactFragment.show(getSupportFragmentManager(), "ContactFragmentDialog");
     }
-
-
 }
