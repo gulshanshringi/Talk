@@ -39,6 +39,7 @@ import com.google.firebase.auth.AuthResult;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.auth.PhoneAuthCredential;
+import com.google.firebase.auth.PhoneAuthOptions;
 import com.google.firebase.auth.PhoneAuthProvider;
 import com.google.firebase.auth.UserProfileChangeRequest;
 import com.google.firebase.storage.FirebaseStorage;
@@ -202,12 +203,22 @@ public class PhoneAuthActivity extends AppCompatActivity {
         String userNumber = "+91" + numberEditTxt.getText().toString().trim();
 
         if (userNumber != null) {
-            PhoneAuthProvider.getInstance().verifyPhoneNumber(
-                    userNumber,        // Phone number to verify
-                    30,                 // Timeout duration
-                    TimeUnit.SECONDS,   // Unit of timeout
-                    this,               // Activity (for callback binding)
-                    mCallbacks);        // OnVerificationStateChangedCallbacks
+            PhoneAuthOptions options =
+                    PhoneAuthOptions.newBuilder(mAuth)
+                            .setPhoneNumber(userNumber)       // Phone number to verify
+                            .setTimeout(60L, TimeUnit.SECONDS) // Timeout and unit
+                            .setActivity(this)                 // Activity (for callback binding)
+                            .setCallbacks(mCallbacks)          // OnVerificationStateChangedCallbacks
+                            .build();
+            PhoneAuthProvider.verifyPhoneNumber(options);
+
+
+//            PhoneAuthProvider.getInstance().verifyPhoneNumber(
+//                    userNumber,        // Phone number to verify
+//                    30,                 // Timeout duration
+//                    TimeUnit.SECONDS,   // Unit of timeout
+//                    this,               // Activity (for callback binding)
+//                    mCallbacks);        // OnVerificationStateChangedCallbacks
         }
 
         otpDescTxt.setText("Please type the verification code sent to " + userNumber);
